@@ -1,0 +1,12 @@
+{
+  "name": "@repo/services",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./api": "./src/api.ts",
+    "./authService": "./src/authService.ts"
+  },
+  "dependencies": {
+    "axios": "^1.18.1"
+  }
+}

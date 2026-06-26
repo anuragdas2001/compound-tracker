@@ -1,0 +1,10 @@
+{
+  "name": "@repo/types",
+  "private": true,
+  "exports": {
+    "./*": "./*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

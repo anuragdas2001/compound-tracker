@@ -1,0 +1,24 @@
+{
+  "name": "@repo/query",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./auth/useRegister": "./src/auth/useRegister.ts",
+    "./auth/useLogin": "./src/auth/useLogin.ts",
+    "./auth/useCurrentUser": "./src/auth/useCurrentUser.ts",
+    "./auth/queryKeys": "./src/auth/queryKeys.ts", 
+    "./providers/query-provider" : "./src/providers/query-provider.tsx"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.84.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "@repo/services": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.1"
+  }
+}
