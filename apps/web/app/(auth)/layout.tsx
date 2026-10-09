@@ -4,7 +4,7 @@ import { Flame } from 'lucide-react';
 
 const heatmap = Array.from({ length: 28 }, (_, i) => i % 5 !== 0);
 
-export function AuthLayout({
+export default function AuthLayout({
   headline,
   subtext,
   children,

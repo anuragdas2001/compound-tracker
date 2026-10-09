@@ -1,7 +1,7 @@
 "use client"
-import { RecoilRoot } from 'recoil';
-import { AuthLayout } from '../auth-layout';
-import { LoginClient } from './login-client';
+import AuthLayout from '../layout';
+
+import { LoginForm } from '@repo/ui/components/auth/login-form';
 
 export default function LoginPage() {
   return (
@@ -15,9 +15,7 @@ export default function LoginPage() {
       }
       subtext="Every habit tracked here starts on day one. Yours can too."
     >
-      <RecoilRoot>
-        <LoginClient />
-      </RecoilRoot>
+      <LoginForm />
     </AuthLayout>
   );
 }

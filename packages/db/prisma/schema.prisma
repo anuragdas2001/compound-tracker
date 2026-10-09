@@ -19,6 +19,8 @@ model User {
   password String
 
   habits    Habit[]
+  gamification UserGamification?
+  ledger       GamificationLedger[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -50,6 +52,32 @@ model HabitLog {
   habit   Habit  @relation(fields: [habitId], references: [id])
 
   completedAt DateTime
+
+  createdAt DateTime @default(now())
+}
+
+model UserGamification {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @unique @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalXp       Int @default(0)
+  level         Int @default(1)
+  sparksBalance Int @default(150)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GamificationLedger {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type       String
+  amount     Int
+  sourceType String
+  sourceId   String
 
   createdAt DateTime @default(now())
 }

@@ -1,23 +1,31 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Mail } from 'lucide-react';
+import { RecoilRoot } from 'recoil';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import {
-  loginSchema,
-  type LoginFormValues,
-} from '@repo/types/auth/schemas';
+import { loginSchema, type LoginFormValues } from '@repo/types/auth/schemas';
 
-import { Button } from '../../button';
-import { Card, CardContent } from '../../card';
-import { Field, FieldError, FieldGroup, FieldLabel } from '../../field';
-import { Input } from '../../input';
+import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
+import { Card, CardContent } from '@repo/ui/card';
+
+import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field';
 
 import { PasswordInput } from './password-input';
 import { SocialLogin } from './social-login';
+import { useLogin } from '@repo/query/auth/useLogin';
+import { useSetAuth } from '@repo/store/hooks/useSetAuth';
 
+// Same field styling as the signup form, so login and signup are visually
+// consistent. Padding is set via inline `style`, not Tailwind padding
+// classes — inline styles always win the cascade regardless of class order,
+// and the shared Input/PasswordInput components apply their own default
+// padding internally, so this is the one approach guaranteed not to get
+// silently overridden by their defaults.
 const inputClasses =
   'h-12 rounded-xl border border-white/10 bg-white/[0.03] text-[15px] ' +
   'text-foreground placeholder:text-muted-foreground/40 ' +
@@ -29,31 +37,25 @@ const inputClasses =
 const labelClasses =
   'text-xs font-semibold uppercase tracking-wider text-muted-foreground/70';
 
-const iconInputStyle = {
-  paddingLeft: '3.5rem',
-  paddingRight: '1rem',
-};
+// Icon sits 20px from the left edge and is 18px wide, so it ends at 38px.
+// 3.5rem (56px) of left padding leaves an 18px gap before the text starts.
+const iconInputStyle = { paddingLeft: '3.5rem', paddingRight: '1rem' };
+const plainInputStyle = { paddingLeft: '1rem', paddingRight: '1rem' };
 
-const plainInputStyle = {
-  paddingLeft: '1rem',
-  paddingRight: '1rem',
-};
-
+// `inset-y-0` + `flex items-center` centers the icon against the wrapper's
+// *actual* rendered height, whatever that turns out to be — unlike
+// `top-1/2` + `-translate-y-1/2`, which only looks centered if our assumed
+// height (h-12) matches the shared Input's real height exactly. That
+// mismatch is what pushed the icon toward the bottom last time.
 const iconWrapClasses =
   'pointer-events-none absolute inset-y-0 left-5 z-10 flex items-center ' +
   'text-muted-foreground/40 transition-colors group-focus-within:text-primary';
 
-export interface LoginFormProps {
-  onSubmit: (values: LoginFormValues) => Promise<void> | void;
-  isPending?: boolean;
-  error?: string;
-}
+export function LoginForm() {
+  const router = useRouter();
+  const loginMutation = useLogin();
+  const setAuth = useSetAuth();
 
-export function LoginForm({
-  onSubmit,
-  isPending = false,
-  error,
-}: LoginFormProps) {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -62,128 +64,124 @@ export function LoginForm({
     },
   });
 
+  async function onSubmit(values: LoginFormValues) {
+    try {
+      const user = await loginMutation.mutateAsync(values);
+      setAuth(user);
+      router.push('/dashboard');
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   return (
-    <Card className="w-full rounded-3xl border border-white/10 bg-white/[0.02] shadow-2xl shadow-black/40 backdrop-blur-xl">
-      <CardContent className="p-10">
-        <div className="mb-8 space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight">
-            Welcome back
-          </h2>
+      <Card className="w-full rounded-3xl border border-white/10 bg-white/[0.02] shadow-2xl shadow-black/40 backdrop-blur-xl">
+        <CardContent className="p-10">
+          <div className="mb-8 space-y-2">
+            <h2 className="text-3xl font-extrabold tracking-tight">
+              Welcome back
+            </h2>
 
-          <p className="text-muted-foreground">
-            Log in to keep your streak alive.
-          </p>
-        </div>
-
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
-        >
-          <FieldGroup className="gap-6">
-            <Controller
-              name="email"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  className="gap-2.5"
-                  data-invalid={fieldState.invalid}
-                >
-                  <FieldLabel
-                    className={labelClasses}
-                    htmlFor="login-email"
-                  >
-                    Email
-                  </FieldLabel>
-
-                  <div className="group relative">
-                    <span className={iconWrapClasses}>
-                      <Mail
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={2}
-                      />
-                    </span>
-
-                    <Input
-                      {...field}
-                      id="login-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      aria-invalid={fieldState.invalid}
-                      className={inputClasses}
-                      style={iconInputStyle}
-                    />
-                  </div>
-
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-
-            <Controller
-              name="password"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  className="gap-2.5"
-                  data-invalid={fieldState.invalid}
-                >
-                  <FieldLabel
-                    className={labelClasses}
-                    htmlFor="login-password"
-                  >
-                    Password
-                  </FieldLabel>
-
-                  <PasswordInput
-                    {...field}
-                    id="login-password"
-                    placeholder="••••••••"
-                    aria-invalid={fieldState.invalid}
-                    className={inputClasses}
-                    style={plainInputStyle}
-                  />
-
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-          </FieldGroup>
-
-          <div className="space-y-6">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isPending}
-              className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
-            >
-              {isPending ? 'Logging In...' : 'Log In'}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-
-            {error ? (
-              <p className="text-center text-sm text-red-500">
-                {error}
-              </p>
-            ) : null}
-
-            <SocialLogin />
-
-            <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/signup"
-                className="font-semibold text-primary hover:underline"
-              >
-                Sign up
-              </Link>
+            <p className="text-muted-foreground">
+              Log in to keep your streak alive.
             </p>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FieldGroup className="gap-6">
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field className="gap-2.5" data-invalid={fieldState.invalid}>
+                    <FieldLabel className={labelClasses} htmlFor="login-email">
+                      Email
+                    </FieldLabel>
+
+                    <div className="group relative">
+                      <span className={iconWrapClasses}>
+                        <Mail className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </span>
+                      <Input
+                        {...field}
+                        id="login-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        aria-invalid={fieldState.invalid}
+                        className={inputClasses}
+                        style={iconInputStyle}
+                      />
+                    </div>
+
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="password"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field className="gap-2.5" data-invalid={fieldState.invalid}>
+                    <FieldLabel
+                      className={labelClasses}
+                      htmlFor="login-password"
+                    >
+                      Password
+                    </FieldLabel>
+
+                    <PasswordInput
+                      {...field}
+                      id="login-password"
+                      placeholder="••••••••"
+                      aria-invalid={fieldState.invalid}
+                      className={inputClasses}
+                      style={plainInputStyle}
+                    />
+
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            </FieldGroup>
+
+            <div className="space-y-6">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={loginMutation.isPending}
+                className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
+              >
+                {loginMutation.isPending ? 'Logging In...' : 'Log In'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+
+              {loginMutation.isError && (
+                <p className="text-center text-sm text-red-500">
+                  {loginMutation.error instanceof Error
+                    ? loginMutation.error.message
+                    : 'Something went wrong'}
+                </p>
+              )}
+
+              <SocialLogin />
+
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/signup"
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
   );
 }

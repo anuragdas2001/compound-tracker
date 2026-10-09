@@ -36,10 +36,10 @@ import {
   
     @Get()
     findAll(
-        @Query("userId") userId: string,
+        @Query("userId") userId?: string,
     ) {
       return this.habitsService.findAll(
-        userId,
+        userId || "68595c0f4d4d3dbd7b2b7f5a",
       );
     }
   
@@ -69,6 +69,17 @@ import {
       return this.habitsService.completeHabit(
         id,
         dto.completedAt,
+      );
+    }
+
+    @Patch(":id/toggle")
+    toggle(
+      @Param("id") id: string,
+      @Body() dto: { completedAt?: string },
+    ) {
+      return this.habitsService.toggleHabit(
+        id,
+        dto?.completedAt,
       );
     }
   

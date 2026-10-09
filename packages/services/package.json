@@ -4,7 +4,9 @@
   "private": true,
   "exports": {
     "./api": "./src/api.ts",
-    "./authService": "./src/authService.ts"
+    "./authService": "./src/authService.ts",
+    "./habitService": "./src/habitService.ts",
+    "./gamificationService": "./src/gamificationService.ts"
   },
   "dependencies": {
     "axios": "^1.18.1"

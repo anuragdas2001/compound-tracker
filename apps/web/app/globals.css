@@ -1,6 +1,41 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 @import "@repo/tailwind-config";
 
 @source "./**/*.{tsx,ts}";
 @source "../../../packages/ui/src/**/*.{tsx,ts}";
 @source "../../../packages/ui/components/**/*.{tsx,ts}";
+
+:root {
+  --c-bg: #FFFFFF;
+  --c-surface: #FFFFFF;
+  --c-surface-soft: #FFFFFF;
+  --c-border: #BBF7D0;
+  --c-border-hover: #86EFAC;
+  --c-primary: #22C55E;
+  --c-light: #4ADE80;
+  --c-pale: #86EFAC;
+  --c-deep: #166534;
+  --c-deeper: #14532D;
+  --c-text: #052E16;
+  --c-muted: #166534;
+  --c-grid: rgba(34, 197, 94, 0.05);
+  --c-glow: rgba(34, 197, 94, 0.12);
+}
+
+:root.dark {
+  --c-bg: #070F0B;
+  --c-surface: #0E1B14;
+  --c-surface-soft: #13241A;
+  --c-border: #1F3328;
+  --c-border-hover: #2C4736;
+  --c-primary: #22C55E;
+  --c-light: #4ADE80;
+  --c-pale: #86EFAC;
+  --c-deep: #14532D;
+  --c-deeper: #052E16;
+  --c-text: #F4FAF6;
+  --c-muted: #7E9486;
+  --c-grid: rgba(34, 197, 94, 0.12);
+  --c-glow: rgba(34, 197, 94, 0.25);
+}

@@ -1,4 +1,4 @@
-import { AuthLayout } from "../auth-layout";
+import AuthLayout from "../layout";
 import { SignupForm } from "@repo/ui/components/auth/signup-form";
 
 export default function SignupPage() {

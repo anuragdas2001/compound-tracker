@@ -10,8 +10,10 @@ import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 
+import { GamificationModule } from './gamification/gamification.module';
+
 @Module({
-  imports: [LinksModule, UsersModule, HabitsModule, PrismaModule, AuthModule],
+  imports: [LinksModule, UsersModule, HabitsModule, GamificationModule, PrismaModule, AuthModule],
   controllers: [AppController],
   providers: [AppService, UsersService],
 })

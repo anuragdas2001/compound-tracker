@@ -7,7 +7,11 @@
     "./auth/useLogin": "./src/auth/useLogin.ts",
     "./auth/useCurrentUser": "./src/auth/useCurrentUser.ts",
     "./auth/queryKeys": "./src/auth/queryKeys.ts", 
-    "./providers/query-provider" : "./src/providers/query-provider.tsx"
+    "./providers/query-provider" : "./src/providers/query-provider.tsx",
+    "./habits/useHabits": "./src/habits/useHabits.ts",
+    "./habits/useMutations": "./src/habits/useMutations.ts",
+    "./gamification/useGamificationSummary": "./src/gamification/useGamificationSummary.ts",
+    "./gamification/queryKeys": "./src/gamification/queryKeys.ts"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.84.1",

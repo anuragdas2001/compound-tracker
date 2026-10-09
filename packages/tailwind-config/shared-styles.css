@@ -31,12 +31,12 @@
     background-image:
       linear-gradient(
         to right,
-        rgba(34, 197, 94, 0.05) 1px,
+        var(--c-grid, rgba(34, 197, 94, 0.05)) 1px,
         transparent 1px
       ),
       linear-gradient(
         to bottom,
-        rgba(34, 197, 94, 0.05) 1px,
+        var(--c-grid, rgba(34, 197, 94, 0.05)) 1px,
         transparent 1px
       );
 
@@ -45,33 +45,17 @@
 
   .hero-glow {
     position: fixed;
-    top: -100px;
+    top: -150px;
     left: 50%;
     transform: translateX(-50%);
 
-    width: 900px;
-    height: 450px;
+    width: 1400px;
+    height: 700px;
 
-    background: rgba(34, 197, 94, 0.12);
+    background: var(--c-glow, rgba(34, 197, 94, 0.12));
 
-    filter: blur(150px);
+    filter: blur(220px);
 
     pointer-events: none;
   }
-}
-
-.hero-glow {
-  position: fixed;
-  top: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 1400px;
-  height: 700px;
-
-  background: rgba(34, 197, 94, 0.12);
-
-  filter: blur(220px);
-
-  pointer-events: none;
 }

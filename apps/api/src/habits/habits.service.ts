@@ -27,6 +27,9 @@ export class HabitsService {
         userId,
         archived: false,
       },
+      include: {
+        logs: true,
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -62,6 +65,9 @@ export class HabitsService {
   }
 
   async remove(id: string) {
+    await this.prisma.habitLog.deleteMany({
+      where: { habitId: id },
+    });
     return this.prisma.habit.delete({
       where: { id },
     });
@@ -80,6 +86,44 @@ export class HabitsService {
           : new Date(),
       },
     });
+  }
+
+  async toggleHabit(
+    habitId: string,
+    completedAt?: string,
+  ) {
+    const date = completedAt ? new Date(completedAt) : new Date();
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingLogs = await this.prisma.habitLog.findMany({
+      where: {
+        habitId,
+        completedAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    if (existingLogs.length > 0) {
+      await this.prisma.habitLog.deleteMany({
+        where: {
+          id: { in: existingLogs.map((l) => l.id) },
+        },
+      });
+      return { status: "uncompleted" };
+    } else {
+      await this.prisma.habitLog.create({
+        data: {
+          habitId,
+          completedAt: date,
+        },
+      });
+      return { status: "completed" };
+    }
   }
 }
 

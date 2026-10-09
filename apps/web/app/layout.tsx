@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
-import { QueryProvider } from '@repo/query/providers/query-provider';
-import { RecoilRoot } from 'recoil';
 import { Providers } from '../providers/provider';
+import { SidebarWrapper } from '../components/sidebar-wrapper';
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
   variable: '--font-geist-sans',
@@ -25,8 +24,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>{children}</Providers>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-[var(--c-bg)] text-[var(--c-text)] transition-colors duration-300 min-h-screen`}>
+        <div className="grid-background" />
+        <div className="hero-glow" />
+        <Providers>
+          <SidebarWrapper>{children}</SidebarWrapper>
+        </Providers>
       </body>
     </html>
   );
