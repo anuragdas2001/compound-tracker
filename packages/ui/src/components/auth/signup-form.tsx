@@ -1,283 +1,158 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Mail, User } from "lucide-react";
-
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Mail, User } from 'lucide-react';
 import {
-  signupSchema,
-  type SignupFormValues,
-} from "@repo/types/auth/schemas";
-
-import { Button } from "../../button";
-import { Checkbox } from "../../checkbox";
-import { Input } from "../../input";
-import { Card, CardContent } from "../../card";
-
-import {
+  Checkbox,
+  Divider,
   Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "../../field";
+  FormError,
+  FormHeader,
+  PasswordField,
+  PasswordStrength,
+  SocialButtons,
+  SubmitButton,
+  getStrength,
+} from './auth-fields';
 
-import { PasswordInput } from "./password-input";
-import { SocialLogin } from "./social-login";
-import { useRegister } from "@repo/query/auth/useRegister";
-import { useSetAuth } from "@repo/store/hooks/useSetAuth";
-// Padding is set via inline `style`, not Tailwind padding classes — the
-// shared Input/PasswordInput components apply their own default padding
-// internally, and inline styles always win the cascade regardless of class
-// order, so this is the one approach guaranteed not to get silently
-// overridden by their defaults.
-const inputClasses =
-  "h-12 rounded-xl border border-white/10 bg-white/[0.03] text-[15px] " +
-  "text-foreground placeholder:text-muted-foreground/40 " +
-  "shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] transition-colors duration-200 " +
-  "hover:border-white/20 " +
-  "focus-visible:border-primary/50 focus-visible:bg-white/[0.05] " +
-  "focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0";
+export type SignupValues = { name: string; email: string; password: string };
 
-const labelClasses =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground/70";
+export interface SignupFormProps {
+  /** Throw an Error (message is shown to the user) to signal a failed signup. */
+  onSubmit?: (values: SignupValues) => Promise<void> | void;
+  onGoogle?: () => void;
+  onGithub?: () => void;
+}
 
-// Icon sits 20px from the left edge and is 18px wide, so it ends at 38px.
-// 3.5rem (56px) of left padding leaves an 18px gap before the text starts.
-const iconInputStyle = { paddingLeft: "3.5rem", paddingRight: "1rem" };
-const plainInputStyle = { paddingLeft: "1rem", paddingRight: "1rem" };
+const PERKS = ['Free forever', 'No card needed', '2-minute setup'];
 
-// `inset-y-0` + `flex items-center` centers the icon against the wrapper's
-// *actual* rendered height, whatever that turns out to be — unlike
-// `top-1/2` + `-translate-y-1/2`, which only looks centered if our assumed
-// height (h-12) matches the shared Input's real height exactly. That
-// mismatch is what pushed the icon toward the bottom last time.
-const iconWrapClasses =
-  "pointer-events-none absolute inset-y-0 left-5 z-10 flex items-center " +
-  "text-muted-foreground/40 transition-colors group-focus-within:text-primary";
+export function SignupForm({ onSubmit, onGoogle, onGithub }: SignupFormProps) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [agree, setAgree] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; agree?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-export function SignupForm() {
-  const router = useRouter();
-  const registerMutation = useRegister();
+  function validate() {
+    const e: typeof errors = {};
+    if (!name.trim()) e.name = 'Tell us what to call you';
+    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address';
+    if (password.length < 8) e.password = 'Use at least 8 characters';
+    else if (getStrength(password) < 2) e.password = 'Make it a little stronger';
+    if (!agree) e.agree = 'Please accept the terms to continue';
+    return e;
+  }
 
-  const form = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      agreed: false,
-    },
-  });
+  async function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    const e = validate();
+    setErrors(e);
+    setFormError(null);
+    if (Object.keys(e).length) return;
 
-  async function onSubmit(
-    values: SignupFormValues,
-  ) {
+    setLoading(true);
     try {
-      await registerMutation.mutateAsync(values);
-      router.push("/login");
-    } catch (error) {
-      console.error(error);
+      // TODO: call your existing signup logic here (or pass it in as `onSubmit`)
+      await onSubmit?.({ name: name.trim(), email, password });
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full rounded-3xl border border-white/10 bg-white/[0.02] shadow-2xl shadow-black/40 backdrop-blur-xl">
-      <CardContent className="p-10">
-        <div className="mb-8 space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight">
-            Create your account
-          </h2>
+    <form onSubmit={handleSubmit} noValidate>
+      <FormHeader title="Create your account" subtitle="Day one starts the moment you sign up." />
 
-          <p className="text-muted-foreground">
-            Free forever. No credit card required.
-          </p>
+      <div className="-mt-3 mb-6 flex flex-wrap gap-2">
+        {PERKS.map((p) => (
+          <span
+            key={p}
+            className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-green-300"
+          >
+            {p}
+          </span>
+        ))}
+      </div>
+
+      <SocialButtons onGoogle={onGoogle} onGithub={onGithub} />
+      <Divider>or with email</Divider>
+
+      <FormError message={formError} />
+
+      <div className="space-y-4">
+        <Field
+          label="Full name"
+          icon={User}
+          autoComplete="name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setErrors((p) => ({ ...p, name: undefined }));
+          }}
+          error={errors.name}
+        />
+        <Field
+          label="Email address"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setErrors((p) => ({ ...p, email: undefined }));
+          }}
+          error={errors.email}
+        />
+        <div>
+          <PasswordField
+            label="Password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setErrors((p) => ({ ...p, password: undefined }));
+            }}
+            error={errors.password}
+          />
+          <PasswordStrength password={password} />
         </div>
+      </div>
 
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
+      <div className="mb-6 mt-5">
+        <Checkbox
+          checked={agree}
+          onChange={(v) => {
+            setAgree(v);
+            setErrors((p) => ({ ...p, agree: undefined }));
+          }}
         >
-          <FieldGroup className="gap-6">
-            <Controller
-              name="name"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  className="gap-2.5"
-                  data-invalid={fieldState.invalid}
-                >
-                  <FieldLabel className={labelClasses}>
-                    Name
-                  </FieldLabel>
+          I agree to the{' '}
+          <Link href="/terms" className="text-primary hover:underline">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="text-primary hover:underline">
+            Privacy Policy
+          </Link>
+        </Checkbox>
+        {errors.agree && <p className="mt-1.5 px-1 text-xs text-red-400">{errors.agree}</p>}
+      </div>
 
-                  <div className="group relative">
-                    <span className={iconWrapClasses}>
-                      <User className="h-[18px] w-[18px]" strokeWidth={2} />
-                    </span>
-                    <Input
-                      {...field}
-                      placeholder="Jordan Lee"
-                      aria-invalid={fieldState.invalid}
-                      className={inputClasses}
-                      style={iconInputStyle}
-                    />
-                  </div>
+      <SubmitButton loading={loading}>Start my streak</SubmitButton>
 
-                  {fieldState.invalid && (
-                    <FieldError
-                      errors={[fieldState.error]}
-                    />
-                  )}
-                </Field>
-              )}
-            />
-
-            <Controller
-              name="email"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  className="gap-2.5"
-                  data-invalid={fieldState.invalid}
-                >
-                  <FieldLabel className={labelClasses}>
-                    Email
-                  </FieldLabel>
-
-                  <div className="group relative">
-                    <span className={iconWrapClasses}>
-                      <Mail className="h-[18px] w-[18px]" strokeWidth={2} />
-                    </span>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="you@example.com"
-                      aria-invalid={fieldState.invalid}
-                      className={inputClasses}
-                      style={iconInputStyle}
-                    />
-                  </div>
-
-                  {fieldState.invalid && (
-                    <FieldError
-                      errors={[fieldState.error]}
-                    />
-                  )}
-                </Field>
-              )}
-            />
-
-            <Controller
-              name="password"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  className="gap-2.5"
-                  data-invalid={fieldState.invalid}
-                >
-                  <FieldLabel className={labelClasses}>
-                    Password
-                  </FieldLabel>
-
-                  <PasswordInput
-                    {...field}
-                    placeholder="At least 6 characters"
-                    aria-invalid={fieldState.invalid}
-                    className={inputClasses}
-                    style={plainInputStyle}
-                  />
-
-                  {fieldState.invalid && (
-                    <FieldError
-                      errors={[fieldState.error]}
-                    />
-                  )}
-                </Field>
-              )}
-            />
-
-            <Controller
-              name="agreed"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field
-                  orientation="horizontal"
-                  className="items-start gap-3"
-                  data-invalid={fieldState.invalid}
-                >
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="mt-0.5"
-                  />
-
-                  <div className="space-y-1">
-                    <FieldLabel className="text-sm font-normal leading-5 text-muted-foreground">
-                      I agree to the{" "}
-                      <Link
-                        href="#"
-                        className="font-medium text-primary hover:underline"
-                      >
-                        Terms
-                      </Link>{" "}
-                      and{" "}
-                      <Link
-                        href="#"
-                        className="font-medium text-primary hover:underline"
-                      >
-                        Privacy Policy
-                      </Link>
-                    </FieldLabel>
-
-                    {fieldState.invalid && (
-                      <FieldError
-                        errors={[fieldState.error]}
-                      />
-                    )}
-                  </div>
-                </Field>
-              )}
-            />
-          </FieldGroup>
-
-          <div className="space-y-6">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={registerMutation.isPending}
-              className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
-            >
-              {registerMutation.isPending
-                ? "Creating Account..."
-                : "Create Account"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-
-            {registerMutation.isError && (
-              <p className="text-center text-sm text-red-500">
-                {registerMutation.error instanceof Error
-                  ? registerMutation.error.message
-                  : "Something went wrong"}
-              </p>
-            )}
-
-            {/* <SocialLogin /> */}
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-primary hover:underline"
-              >
-                Log in
-              </Link>
-            </p>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <p className="mt-6 text-center text-sm text-white/50">
+        Already have an account?{' '}
+        <Link href="/login" className="font-semibold text-primary transition hover:text-green-300">
+          Log in
+        </Link>
+      </p>
+    </form>
   );
 }
+
+export default SignupForm;

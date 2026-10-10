@@ -9,5 +9,6 @@ export const useGamificationSummary = (userId?: string) => {
       const response = await gamificationService.getSummary(userId);
       return response.data;
     },
+    enabled: !!userId,
   });
 };

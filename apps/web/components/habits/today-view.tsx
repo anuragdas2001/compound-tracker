@@ -182,10 +182,10 @@ export function TodayView({
             </span>
           )}
         </span>
-        {habit.time && (
+        {habit.category && (
           <span className="mt-1 flex items-center gap-1 text-xs" style={{ color: C.muted }}>
-            <Clock className="h-3 w-3" />
-            {habit.time}
+            <Zap className="h-3 w-3" />
+            {habit.category}
           </span>
         )}
       </span>

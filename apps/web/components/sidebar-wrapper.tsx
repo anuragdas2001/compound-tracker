@@ -35,7 +35,8 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const isPublicRoute =
     pathname === "/" ||
     pathname?.startsWith("/login") ||
-    pathname?.startsWith("/register") ||
+    pathname?.startsWith("/signup") ||
+    pathname?.startsWith("/onboarding") ||
     pathname?.startsWith("/(auth)");
 
   if (isPublicRoute) {

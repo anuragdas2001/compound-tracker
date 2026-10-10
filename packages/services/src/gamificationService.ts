@@ -6,6 +6,8 @@ export interface GamificationSummary {
   totalXp: number;
   level: number;
   sparksBalance: number;
+  shields: number;
+  unreadNotifications: number;
 }
 
 export const gamificationService = {

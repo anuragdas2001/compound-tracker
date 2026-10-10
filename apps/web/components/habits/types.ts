@@ -6,7 +6,7 @@ export type Habit = {
   id: string;
   name: string;
   best: number;
-  time?: string;
+  category?: string;
   logs: HabitLog[];
 };
 

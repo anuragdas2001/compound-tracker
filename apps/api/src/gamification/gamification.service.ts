@@ -28,6 +28,18 @@ export class GamificationService {
       });
     }
 
-    return summary;
+    const shields = await this.prisma.powerUpInventory.findUnique({
+      where: { userId_powerUpType: { userId, powerUpType: 'STREAK_SHIELD' } },
+    });
+
+    const unreadNotifications = await this.prisma.notification.count({
+      where: { userId, readAt: null },
+    });
+
+    return {
+      ...summary,
+      shields: shields?.quantity || 0,
+      unreadNotifications,
+    };
   }
 }

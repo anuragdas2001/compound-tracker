@@ -15,48 +15,21 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useHabits } from '@repo/query/habits/useHabits';
+import { useCreateHabit } from '@repo/query/habits/useMutations';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
-// Green system, anchored on the brand primary #22c55e.
-const COLOR = {
-  bg: 'var(--c-bg)',
-  surface: 'var(--c-surface)',
-  surfaceSoft: 'var(--c-surface-soft)',
-  border: 'var(--c-border)',
-  borderHover: 'var(--c-border-hover)',
-  primary: 'var(--c-primary)',
-  light: 'var(--c-light)',
-  pale: 'var(--c-pale)',
-  deep: 'var(--c-deep)',
-  deeper: 'var(--c-deeper)',
-  text: 'var(--c-text)',
-  muted: 'var(--c-muted)',
-};
-
-const habits = [
-  { id: 1, title: 'Morning Workout', icon: Target, streak: 24, progress: 100, completed: true },
-  { id: 2, title: 'Drink 3L Water', icon: Droplet, streak: 31, progress: 100, completed: true },
-  { id: 3, title: 'Plan Tomorrow', icon: CalendarDays, streak: 21, progress: 100, completed: true },
-  { id: 4, title: 'Read 20 Pages', icon: BookOpen, streak: 12, progress: 70, completed: false },
-  { id: 5, title: 'Journal Before Bed', icon: PenLine, streak: 9, progress: 100, completed: true },
-  { id: 6, title: 'No Added Sugar', icon: Ban, streak: 5, progress: 100, completed: true },
-  { id: 7, title: 'Stretch 10 Minutes', icon: Activity, streak: 14, progress: 20, completed: false },
-  { id: 8, title: 'Meditation', icon: Sparkles, streak: 17, progress: 40, completed: false },
+const SUGGESTED_HABITS = [
+  { title: 'Morning Workout', description: 'Exercise for at least 30 minutes', icon: Target },
+  { title: 'Drink 3L Water', description: 'Stay hydrated throughout the day', icon: Droplet },
+  { title: 'Read 20 Pages', description: 'Read a book before bed', icon: BookOpen },
+  { title: 'Meditation', description: '10 minutes of mindfulness', icon: Sparkles },
 ];
-
-const activity = [
-  { text: 'Completed Morning Workout', time: 'Just now', color: 'var(--c-primary)' },
-  { text: 'Reached water goal', time: '2h ago', color: 'var(--c-light)' },
-  { text: 'Logged 15 pages read', time: '5h ago', color: 'var(--c-pale)' },
-  { text: 'Started meditation session', time: 'Yesterday', color: 'var(--c-muted)' },
-];
-
-// Sun–Fri are fixed history; today (Sat) reflects the live completion rate below.
-const weeklyBase = [70, 85, 90, 65, 100, 80];
 
 const GOAL_DAY = 21;
 const GOAL_TOTAL = 30;
@@ -64,12 +37,40 @@ const RING_RADIUS = 58;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export default function DashboardPage() {
-  const activeCount = habits.length;
-  const completedCount = habits.filter((h) => h.completed).length;
-  const pendingCount = activeCount - completedCount;
-  const successRate = '86%';
+  const { data: session } = useSession();
+  const { data: realHabits = [], isLoading } = useHabits((session?.user as any)?.id);
+  const { mutate: createHabit, isPending: isCreating } = useCreateHabit();
 
-  const todayCompletion = Math.round((completedCount / activeCount) * 100);
+  const activeHabits = realHabits.filter((h) => !h.archived);
+  
+  // Calculate today's string in local time
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const computedHabits = activeHabits.map(h => {
+    const completedToday = h.logs?.some(l => (l.completedAt as string).startsWith(todayStr)) || false;
+    const streak = h.logs?.length || 0;
+    
+    return {
+      ...h,
+      completed: completedToday,
+      streak,
+      progress: completedToday ? 100 : 0,
+      icon: Target,
+    };
+  });
+
+  const activeCount = computedHabits.length;
+  const completedCount = computedHabits.filter((h) => h.completed).length;
+  const pendingCount = activeCount - completedCount;
+  
+  const totalPossible = activeCount * 7; 
+  const totalLogged = computedHabits.reduce((acc, h) => acc + h.streak, 0); 
+  const successRate = activeCount > 0 ? Math.min(100, Math.round((totalLogged / Math.max(totalPossible, 1)) * 100)) + '%' : '0%';
+
+  const todayCompletion = activeCount > 0 ? Math.round((completedCount / activeCount) * 100) : 0;
+  
+  // For now, keep visual dummy history if logs aren't spanning a full week yet
+  const weeklyBase = [70, 85, 90, 65, 100, 80];
   const weekly = [...weeklyBase, todayCompletion];
 
   const goalProgress = Math.round((GOAL_DAY / GOAL_TOTAL) * 100);
@@ -79,12 +80,41 @@ export default function DashboardPage() {
     .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     .toUpperCase();
 
+  const maxStreak = computedHabits.length > 0 ? Math.max(...computedHabits.map(h => h.streak)) : 0;
+
   const stats = [
     { title: 'Active Habits', value: activeCount, icon: Target, accent: 'var(--c-pale)' },
     { title: 'Completed Today', value: `${completedCount} / ${activeCount}`, icon: CheckCircle2, accent: 'var(--c-light)' },
-    { title: 'Current Streak', value: `${GOAL_DAY} Days`, icon: Flame, accent: 'var(--c-primary)' },
+    { title: 'Max Streak', value: `${maxStreak} Days`, icon: Flame, accent: 'var(--c-primary)' },
     { title: 'Success Rate', value: successRate, icon: TrendingUp, accent: '#16A34A' },
   ];
+
+  const allLogs = realHabits.flatMap(h => h.logs?.map(l => ({ ...l, habitTitle: h.title })) || []);
+  allLogs.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  
+  const activity = allLogs.slice(0, 4).map(log => {
+    return {
+      text: `Completed ${log.habitTitle}`,
+      time: new Date(log.completedAt).toLocaleDateString(),
+      color: 'var(--c-primary)'
+    };
+  });
+
+  const handleAddSuggested = (suggested: typeof SUGGESTED_HABITS[0]) => {
+    createHabit({
+      title: suggested.title,
+      description: suggested.description,
+      color: '#22c55e'
+    });
+  };
+
+  const currentHour = new Date().getHours();
+  let greeting = 'Good evening';
+  if (currentHour < 12) greeting = 'Good morning';
+  else if (currentHour < 18) greeting = 'Good afternoon';
+
+  const firstName = session?.user?.name ? session.user.name.split(' ')[0] : '';
+  const greetingText = firstName ? `${greeting}, ${firstName}` : 'Welcome back';
 
   return (
     <main
@@ -96,13 +126,6 @@ export default function DashboardPage() {
         backgroundSize: '40px 40px',
       }}
     >
-      {/* Drop-in font import. For production, move these into a <link> in your root layout
-          (or load via next/font) so they're fetched alongside the document, not after hydration. */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=JetBrains+Mono:wght@400;500&display=swap"
-      />
-
       <div className="mx-auto max-w-7xl space-y-8 px-6 pt-16 pb-10 lg:py-10">
         {/* Header */}
         <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
@@ -111,58 +134,85 @@ export default function DashboardPage() {
               {todayLabel}
             </p>
             <h1 className="mt-2 text-4xl font-semibold text-[var(--c-text)] sm:text-5xl" style={fontDisplay}>
-              Welcome back
+              {greetingText}
             </h1>
             <p className="mt-2 text-[var(--c-muted)]">
               {pendingCount > 0
                 ? `${pendingCount} habit${pendingCount === 1 ? '' : 's'} left to keep the chain unbroken.`
-                : 'Every link forged today. Well done.'}
+                : activeCount === 0 
+                  ? 'Ready to build some new habits?'
+                  : 'Every link forged today. Well done.'}
             </p>
           </div>
-
-         
         </header>
 
-        {/* Signature: The Chain — today's habits as an unbroken sequence */}
-        <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--c-muted)]" style={fontMono}>
-              Current Streak
-            </p>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--c-border)] bg-[var(--c-surface-soft)] px-4 py-1.5 text-xs font-medium text-[var(--c-text)]">
-              <Flame size={14} className="text-[var(--c-primary)]" />
-              On Fire
-            </span>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-6xl font-semibold leading-none text-[var(--c-text)]" style={fontDisplay}>
-              {GOAL_DAY}
-              <span className="ml-2 text-2xl font-normal text-[var(--c-primary)]">days</span>
-            </p>
-
-            <div className="flex flex-1 items-center justify-end gap-2 overflow-x-auto pb-1">
-              {habits.map((habit) => (
-                <div
-                  key={habit.id}
-                  title={habit.title}
-                  className={`h-10 w-10 flex-none rounded-lg border transition-colors ${
-                    habit.completed
-                      ? 'border-[var(--c-primary)] bg-[var(--c-primary)]'
-                      : 'border-[var(--c-border)] bg-[var(--c-surface-soft)]'
-                  }`}
-                />
+        {activeCount === 0 && !isLoading ? (
+          <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
+            <h2 className="mb-6 text-xl text-[var(--c-text)]" style={fontDisplay}>
+              Suggested Habits
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {SUGGESTED_HABITS.map(suggested => (
+                <div key={suggested.title} className="flex flex-col justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-surface-soft)] p-5">
+                  <div>
+                    <suggested.icon className="mb-3 text-[var(--c-primary)]" size={24} />
+                    <h3 className="font-semibold text-[var(--c-text)]">{suggested.title}</h3>
+                    <p className="mt-1 text-sm text-[var(--c-muted)]">{suggested.description}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleAddSuggested(suggested)}
+                    disabled={isCreating}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--c-primary)]/10 py-2 text-sm font-medium text-[var(--c-primary)] transition-colors hover:bg-[var(--c-primary)]/20"
+                  >
+                    <Plus size={16} /> Add Habit
+                  </button>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
+        ) : (
+          <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--c-muted)]" style={fontMono}>
+                Max Streak
+              </p>
+              {maxStreak > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--c-border)] bg-[var(--c-surface-soft)] px-4 py-1.5 text-xs font-medium text-[var(--c-text)]">
+                  <Flame size={14} className="text-[var(--c-primary)]" />
+                  On Fire
+                </span>
+              )}
+            </div>
 
-          <p className="mt-6 text-sm text-[var(--c-muted)]">
-            <span className="text-[var(--c-text)]" style={fontMono}>
-              {completedCount}/{activeCount}
-            </span>{' '}
-            links forged today.
-          </p>
-        </section>
+            <div className="mt-4 flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-6xl font-semibold leading-none text-[var(--c-text)]" style={fontDisplay}>
+                {maxStreak}
+                <span className="ml-2 text-2xl font-normal text-[var(--c-primary)]">days</span>
+              </p>
+
+              <div className="flex flex-1 items-center justify-end gap-2 overflow-x-auto pb-1">
+                {computedHabits.map((habit) => (
+                  <div
+                    key={habit.id}
+                    title={habit.title}
+                    className={`h-10 w-10 flex-none rounded-lg border transition-colors ${
+                      habit.completed
+                        ? 'border-[var(--c-primary)] bg-[var(--c-primary)]'
+                        : 'border-[var(--c-border)] bg-[var(--c-surface-soft)]'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-6 text-sm text-[var(--c-muted)]">
+              <span className="text-[var(--c-text)]" style={fontMono}>
+                {completedCount}/{activeCount}
+              </span>{' '}
+              links forged today.
+            </p>
+          </section>
+        )}
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -201,7 +251,9 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3">
-                {habits.map((habit) => {
+                {computedHabits.length === 0 ? (
+                  <p className="text-sm text-[var(--c-muted)]">No habits tracking right now.</p>
+                ) : computedHabits.map((habit) => {
                   const Icon = habit.icon;
                   return (
                     <div
@@ -256,8 +308,10 @@ export default function DashboardPage() {
               </h2>
 
               <div className="space-y-5">
-                {activity.map((item, i) => (
-                  <div key={item.text} className="relative flex gap-4 pl-1">
+                {activity.length === 0 ? (
+                  <p className="text-sm text-[var(--c-muted)]">No recent activity.</p>
+                ) : activity.map((item, i) => (
+                  <div key={i} className="relative flex gap-4 pl-1">
                     {i !== activity.length - 1 && (
                       <span className="absolute left-[5px] top-4 h-[calc(100%+0.75rem)] w-px bg-[var(--c-border)]" />
                     )}

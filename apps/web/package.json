@@ -11,13 +11,16 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@next-auth/prisma-adapter": "^1.0.7",
     "@repo/query": "workspace:*",
-    "@repo/ui": "workspace:*",
     "@repo/store": "workspace:*",
+    "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.84.1",
+    "bcryptjs": "^3.0.3",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
     "next": "15.5.4",
+    "next-auth": "^4.24.15",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "recoil": "^0.7.7"
@@ -28,6 +31,7 @@
     "@repo/tailwind-config": "*",
     "@repo/types": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.15.3",
     "@types/react": "18.3.1",
     "@types/react-dom": "18.3.1",
@@ -36,5 +40,3 @@
     "typescript": "5.8.2"
   }
 }
-
-

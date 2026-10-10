@@ -5,8 +5,8 @@ import { C, fontDisplay } from "./constants";
 type AddHabitModalProps = {
   newName: string;
   setNewName: (value: string) => void;
-  newTime: string;
-  setNewTime: (value: string) => void;
+  newCategory: string;
+  setNewCategory: (value: string) => void;
   onClose: () => void;
   onCreate: () => void;
 };
@@ -27,8 +27,8 @@ const DIFFICULTIES = [
 export function AddHabitModal({
   newName,
   setNewName,
-  newTime,
-  setNewTime,
+  newCategory,
+  setNewCategory,
   onClose,
   onCreate,
 }: AddHabitModalProps) {
@@ -72,12 +72,12 @@ export function AddHabitModal({
             
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: C.muted }}>
-                Scheduled Time (Optional)
+                Category (Optional)
               </label>
               <input
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                placeholder="e.g. 08:00 AM"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="e.g. Health, Productivity"
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--c-primary)]"
                 style={{ borderColor: C.border, backgroundColor: C.surfaceSoft, color: C.text }}
               />

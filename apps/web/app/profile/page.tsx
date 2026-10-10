@@ -1,5 +1,8 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
+import { useState } from 'react';
+
 import { 
   User, 
   MapPin, 
@@ -74,6 +77,21 @@ function Crown(props: any) {
 }
 
 export default function ProfilePage() {
+  const { data: session, update } = useSession();
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    await fetch('/api/auth/verify-email', { method: 'POST' });
+    await update();
+    window.location.reload();
+  };
+
+  const name = session?.user?.name || userProfile.name;
+  const email = session?.user?.email || userProfile.username;
+  const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+  const isVerified = (session?.user as any)?.emailVerified;
+
   const levelProgress = (userProfile.currentXP / userProfile.nextLevelXP) * 100;
 
   const getHeatmapColor = (intensity: number) => {
@@ -120,7 +138,7 @@ export default function ProfilePage() {
               <div className="relative h-40 w-40 rounded-[2rem] bg-[var(--c-bg)] p-1.5 shadow-xl rotate-3 group-hover:rotate-0 transition-transform duration-500">
                 <div className="h-full w-full rounded-[1.6rem] bg-gradient-to-br from-[var(--c-surface)] to-[var(--c-surface-soft)] border border-[var(--c-border)] flex items-center justify-center overflow-hidden">
                   <span className="text-5xl font-bold bg-gradient-to-br from-[var(--c-text)] to-[var(--c-muted)] bg-clip-text text-transparent drop-shadow-sm" style={fontDisplay}>
-                    {userProfile.avatarInitials}
+                    {initials}
                   </span>
                 </div>
               </div>
@@ -137,14 +155,16 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex items-center justify-center md:justify-start gap-3">
                     <h1 className="text-4xl sm:text-5xl font-bold text-[var(--c-text)] tracking-tight" style={fontDisplay}>
-                      {userProfile.name}
+                      {name}
                     </h1>
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--c-primary)]/10 text-[var(--c-primary)] border border-[var(--c-primary)]/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                      <CheckCircle2 size={16} />
-                    </div>
+                    {isVerified ? (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--c-primary)]/10 text-[var(--c-primary)] border border-[var(--c-primary)]/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]" title="Verified">
+                        <CheckCircle2 size={16} />
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex items-center justify-center md:justify-start gap-3 mt-2 text-[var(--c-muted)] font-medium">
-                    <span className="text-lg">{userProfile.username}</span>
+                    <span className="text-lg">{email}</span>
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--c-border)]" />
                     <span className="flex items-center gap-1"><MapPin size={14} />{userProfile.location}</span>
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--c-border)] hidden sm:block" />
@@ -152,10 +172,21 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-primary)]/5 hover:text-[var(--c-primary)] transition-all duration-300 font-semibold group w-full sm:w-auto shrink-0">
-                  <Edit3 size={16} className="group-hover:rotate-12 transition-transform" />
-                  Edit Profile
-                </button>
+                <div className="flex gap-3 items-center">
+                  {!isVerified && (
+                    <button 
+                      onClick={handleVerify}
+                      disabled={isVerifying}
+                      className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-orange-500/10 border border-orange-500/50 text-orange-500 shadow-sm hover:border-orange-500 hover:bg-orange-500/20 transition-all duration-300 font-semibold w-full sm:w-auto shrink-0"
+                    >
+                      {isVerifying ? 'Verifying...' : 'Verify Email'}
+                    </button>
+                  )}
+                  <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-primary)]/5 hover:text-[var(--c-primary)] transition-all duration-300 font-semibold group w-full sm:w-auto shrink-0">
+                    <Edit3 size={16} className="group-hover:rotate-12 transition-transform" />
+                    Edit Profile
+                  </button>
+                </div>
               </div>
 
               <p className="text-[var(--c-text)]/80 text-lg leading-relaxed mt-6 max-w-2xl text-center md:text-left">

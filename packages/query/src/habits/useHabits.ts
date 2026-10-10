@@ -9,5 +9,6 @@ export const useHabits = (userId?: string) => {
       const response = await habitService.getHabits(userId);
       return response.data;
     },
+    enabled: !!userId,
   });
 };

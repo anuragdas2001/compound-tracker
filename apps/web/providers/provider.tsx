@@ -3,6 +3,7 @@
 import { RecoilRoot } from "recoil";
 import { GamificationProvider } from "../store/gamification";
 import { QueryProvider } from "@repo/query/providers/query-provider";
+import { SessionProvider } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export function Providers({
@@ -17,14 +18,20 @@ export function Providers({
   }, []);
 
   if (!isMounted) {
-    return <QueryProvider>{children}</QueryProvider>;
+    return (
+      <SessionProvider>
+        <QueryProvider>{children}</QueryProvider>
+      </SessionProvider>
+    );
   }
 
   return (
-    <RecoilRoot>
-      <QueryProvider>
-        <GamificationProvider>{children}</GamificationProvider>
-      </QueryProvider>
-    </RecoilRoot>
+    <SessionProvider>
+      <RecoilRoot>
+        <QueryProvider>
+          <GamificationProvider>{children}</GamificationProvider>
+        </QueryProvider>
+      </RecoilRoot>
+    </SessionProvider>
   );
 }

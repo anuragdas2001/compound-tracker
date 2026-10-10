@@ -40,7 +40,7 @@ export default function MomentumApp() {
     return (fetchedHabits as FetchedHabit[]).map((h) => ({
       id: h.id,
       name: h.title || h.name || "",
-      time: h.description || h.time || undefined,
+      category: h.description || h.time || undefined,
       best: 0,
       logs: h.logs || [],
     }));
@@ -51,7 +51,7 @@ export default function MomentumApp() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newTime, setNewTime] = useState("");
+  const [newCategory, setNewCategory] = useState("");
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -94,12 +94,12 @@ export default function MomentumApp() {
     createHabitMutation.mutate(
       {
         title: newName.trim(),
-        description: newTime.trim() || undefined,
+        description: newCategory.trim() || undefined,
       },
       {
         onSuccess: () => {
           setNewName("");
-          setNewTime("");
+          setNewCategory("");
           setAddOpen(false);
         },
       }
@@ -207,8 +207,8 @@ export default function MomentumApp() {
         <AddHabitModal
           newName={newName}
           setNewName={setNewName}
-          newTime={newTime}
-          setNewTime={setNewTime}
+          newCategory={newCategory}
+          setNewCategory={setNewCategory}
           onClose={() => setAddOpen(false)}
           onCreate={addHabit}
         />

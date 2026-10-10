@@ -1,187 +1,114 @@
 'use client';
 
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, Mail } from 'lucide-react';
-import { RecoilRoot } from 'recoil';
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Mail } from 'lucide-react';
+import {
+  Checkbox,
+  Divider,
+  Field,
+  FormError,
+  FormHeader,
+  PasswordField,
+  SocialButtons,
+  SubmitButton,
+} from './auth-fields';
 
-import { loginSchema, type LoginFormValues } from '@repo/types/auth/schemas';
+export type LoginValues = { email: string; password: string; remember: boolean };
 
-import { Button } from '@repo/ui/button';
-import { Input } from '@repo/ui/input';
-import { Card, CardContent } from '@repo/ui/card';
+export interface LoginFormProps {
+  /** Throw an Error (message is shown to the user) to signal a failed login. */
+  onSubmit?: (values: LoginValues) => Promise<void> | void;
+  onGoogle?: () => void;
+  onGithub?: () => void;
+}
 
-import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field';
+export function LoginForm({ onSubmit, onGoogle, onGithub }: LoginFormProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-import { PasswordInput } from './password-input';
-import { SocialLogin } from './social-login';
-import { useLogin } from '@repo/query/auth/useLogin';
-import { useSetAuth } from '@repo/store/hooks/useSetAuth';
+  function validate() {
+    const e: typeof errors = {};
+    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address';
+    if (!password) e.password = 'Enter your password';
+    return e;
+  }
 
-// Same field styling as the signup form, so login and signup are visually
-// consistent. Padding is set via inline `style`, not Tailwind padding
-// classes — inline styles always win the cascade regardless of class order,
-// and the shared Input/PasswordInput components apply their own default
-// padding internally, so this is the one approach guaranteed not to get
-// silently overridden by their defaults.
-const inputClasses =
-  'h-12 rounded-xl border border-white/10 bg-white/[0.03] text-[15px] ' +
-  'text-foreground placeholder:text-muted-foreground/40 ' +
-  'shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] transition-colors duration-200 ' +
-  'hover:border-white/20 ' +
-  'focus-visible:border-primary/50 focus-visible:bg-white/[0.05] ' +
-  'focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0';
+  async function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    const e = validate();
+    setErrors(e);
+    setFormError(null);
+    if (Object.keys(e).length) return;
 
-const labelClasses =
-  'text-xs font-semibold uppercase tracking-wider text-muted-foreground/70';
-
-// Icon sits 20px from the left edge and is 18px wide, so it ends at 38px.
-// 3.5rem (56px) of left padding leaves an 18px gap before the text starts.
-const iconInputStyle = { paddingLeft: '3.5rem', paddingRight: '1rem' };
-const plainInputStyle = { paddingLeft: '1rem', paddingRight: '1rem' };
-
-// `inset-y-0` + `flex items-center` centers the icon against the wrapper's
-// *actual* rendered height, whatever that turns out to be — unlike
-// `top-1/2` + `-translate-y-1/2`, which only looks centered if our assumed
-// height (h-12) matches the shared Input's real height exactly. That
-// mismatch is what pushed the icon toward the bottom last time.
-const iconWrapClasses =
-  'pointer-events-none absolute inset-y-0 left-5 z-10 flex items-center ' +
-  'text-muted-foreground/40 transition-colors group-focus-within:text-primary';
-
-export function LoginForm() {
-  const router = useRouter();
-  const loginMutation = useLogin();
-  const setAuth = useSetAuth();
-
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  async function onSubmit(values: LoginFormValues) {
+    setLoading(true);
     try {
-      const user = await loginMutation.mutateAsync(values);
-      setAuth(user);
-      router.push('/dashboard');
-    } catch (error) {
-      console.error(error);
+      // TODO: call your existing login logic here (or pass it in as `onSubmit`)
+      await onSubmit?.({ email, password, remember });
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-      <Card className="w-full rounded-3xl border border-white/10 bg-white/[0.02] shadow-2xl shadow-black/40 backdrop-blur-xl">
-        <CardContent className="p-10">
-          <div className="mb-8 space-y-2">
-            <h2 className="text-3xl font-extrabold tracking-tight">
-              Welcome back
-            </h2>
+    <form onSubmit={handleSubmit} noValidate>
+      <FormHeader title="Welcome back" subtitle="Log in to keep your chain alive." />
 
-            <p className="text-muted-foreground">
-              Log in to keep your streak alive.
-            </p>
-          </div>
+      <SocialButtons onGoogle={onGoogle} onGithub={onGithub} />
+      <Divider>or with email</Divider>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FieldGroup className="gap-6">
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field className="gap-2.5" data-invalid={fieldState.invalid}>
-                    <FieldLabel className={labelClasses} htmlFor="login-email">
-                      Email
-                    </FieldLabel>
+      <FormError message={formError} />
 
-                    <div className="group relative">
-                      <span className={iconWrapClasses}>
-                        <Mail className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </span>
-                      <Input
-                        {...field}
-                        id="login-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        aria-invalid={fieldState.invalid}
-                        className={inputClasses}
-                        style={iconInputStyle}
-                      />
-                    </div>
+      <div className="space-y-4">
+        <Field
+          label="Email address"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setErrors((p) => ({ ...p, email: undefined }));
+          }}
+          error={errors.email}
+        />
+        <PasswordField
+          label="Password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setErrors((p) => ({ ...p, password: undefined }));
+          }}
+          error={errors.password}
+        />
+      </div>
 
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
+      <div className="mb-6 mt-5 flex items-center justify-between">
+        <Checkbox checked={remember} onChange={setRemember}>
+          Remember me
+        </Checkbox>
+        <Link href="/forgot-password" className="text-sm font-medium text-primary transition hover:text-green-300">
+          Forgot password?
+        </Link>
+      </div>
 
-              <Controller
-                name="password"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field className="gap-2.5" data-invalid={fieldState.invalid}>
-                    <FieldLabel
-                      className={labelClasses}
-                      htmlFor="login-password"
-                    >
-                      Password
-                    </FieldLabel>
+      <SubmitButton loading={loading}>Log in</SubmitButton>
 
-                    <PasswordInput
-                      {...field}
-                      id="login-password"
-                      placeholder="••••••••"
-                      aria-invalid={fieldState.invalid}
-                      className={inputClasses}
-                      style={plainInputStyle}
-                    />
-
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
-            </FieldGroup>
-
-            <div className="space-y-6">
-              <Button
-                type="submit"
-                size="lg"
-                disabled={loginMutation.isPending}
-                className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
-              >
-                {loginMutation.isPending ? 'Logging In...' : 'Log In'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-
-              {loginMutation.isError && (
-                <p className="text-center text-sm text-red-500">
-                  {loginMutation.error instanceof Error
-                    ? loginMutation.error.message
-                    : 'Something went wrong'}
-                </p>
-              )}
-
-              <SocialLogin />
-
-              <p className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link
-                  href="/signup"
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Sign up
-                </Link>
-              </p>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <p className="mt-6 text-center text-sm text-white/50">
+        New to Compound?{' '}
+        <Link href="/signup" className="font-semibold text-primary transition hover:text-green-300">
+          Create an account
+        </Link>
+      </p>
+    </form>
   );
 }
+
+export default LoginForm;
