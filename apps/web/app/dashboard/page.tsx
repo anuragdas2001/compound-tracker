@@ -132,7 +132,7 @@ export default function DashboardPage() {
     >
       <div className="mx-auto max-w-7xl space-y-8 px-6 pt-16 pb-10 lg:py-10">
         {/* Header */}
-        <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[var(--c-muted)]" style={fontMono}>
               {todayLabel}
@@ -148,8 +148,45 @@ export default function DashboardPage() {
                   : 'Every link forged today. Well done.'}
             </p>
           </div>
-        </header>
+           {/* Goal */}
+            <div className="w-full shrink-0 sm:w-auto sm:-mt-2">
+              <h2 className="mb-4 flex items-center gap-2 text-lg text-[var(--c-text)]" style={fontDisplay}>
+                <Award size={20} className="text-[var(--c-primary)]" />
+                Current Goal
+              </h2>
 
+              <div className="flex flex-row items-center gap-6 rounded-2xl bg-[var(--c-surface-soft)] p-4 pr-8 border border-[var(--c-border)] shadow-sm">
+                <div className="relative h-20 w-20 flex-none">
+                  <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90 filter drop-shadow-sm">
+                    <circle cx="70" cy="70" r={RING_RADIUS} fill="none" stroke='var(--c-border)' strokeWidth="10" />
+                    <circle
+                      cx="70"
+                      cy="70"
+                      r={RING_RADIUS}
+                      fill="none"
+                      stroke='var(--c-primary)'
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={RING_CIRCUMFERENCE}
+                      strokeDashoffset={ringOffset}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-0.5">
+                    <span className="text-xl font-bold text-[var(--c-text)] leading-none" style={fontMono}>
+                      {GOAL_DAY}
+                    </span>
+                    <span className="text-[9px] font-semibold uppercase tracking-widest text-[var(--c-muted)] mt-1">days</span>
+                  </div>
+                </div>
+
+                <div className="text-left">
+                  <h3 className="text-base font-semibold text-[var(--c-text)]">30 Day Challenge</h3>
+                  <p className="mt-1 text-sm text-[var(--c-muted)]">Day {GOAL_DAY} &mdash; Keep going!</p>
+                </div>
+              </div>
+            </div>
+        </header>
+                
         {activeCount > 0 || isLoading ? (
           <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
             <div className="flex items-center justify-between">
@@ -383,43 +420,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Goal */}
-            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6">
-              <h2 className="mb-5 flex items-center gap-2 text-lg text-[var(--c-text)]" style={fontDisplay}>
-                <Award size={18} className="text-[var(--c-primary)]" />
-                Current Goal
-              </h2>
-
-              <div className="flex flex-col items-center gap-5 rounded-xl bg-[var(--c-surface-soft)] p-5 sm:flex-row">
-                <div className="relative h-32 w-32 flex-none">
-                  <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-                    <circle cx="70" cy="70" r={RING_RADIUS} fill="none" stroke='var(--c-border)' strokeWidth="10" />
-                    <circle
-                      cx="70"
-                      cy="70"
-                      r={RING_RADIUS}
-                      fill="none"
-                      stroke='var(--c-primary)'
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      strokeDasharray={RING_CIRCUMFERENCE}
-                      strokeDashoffset={ringOffset}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl text-[var(--c-text)]" style={fontMono}>
-                      {GOAL_DAY}/{GOAL_TOTAL}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wide text-[var(--c-muted)]">days</span>
-                  </div>
-                </div>
-
-                <div className="text-center sm:text-left">
-                  <h3 className="font-medium text-[var(--c-text)]">30 Day Consistency Challenge</h3>
-                  <p className="mt-1 text-sm text-[var(--c-muted)]">You&rsquo;re on day {GOAL_DAY}. Keep going.</p>
-                </div>
-              </div>
-            </div>
+           
 
             {/* Motivation */}
             <div
