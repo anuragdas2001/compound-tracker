@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Flame,
   MoreHorizontal,
+  Pencil,
   Target,
   Trash2,
   TrendingUp,
@@ -25,6 +26,7 @@ type InsightsViewProps = {
   setWeekOffset: Dispatch<SetStateAction<number>>;
   toggleDay: (habitId: string, dayIndex: number, weekOff?: number) => void;
   deleteHabit: (habitId: string) => void;
+  editHabit: (habitId: string) => void;
   menuOpenId: string | null;
   setMenuOpenId: Dispatch<SetStateAction<string | null>>;
 };
@@ -36,6 +38,7 @@ export function InsightsView({
   setWeekOffset,
   toggleDay,
   deleteHabit,
+  editHabit,
   menuOpenId,
   setMenuOpenId,
 }: InsightsViewProps) {
@@ -277,6 +280,14 @@ export function InsightsView({
                       </button>
                       {menuOpenId === habit.id && (
                         <div className="absolute right-0 z-30 mt-2 w-40 rounded-lg border p-1" style={{ borderColor: C.border, backgroundColor: C.surface }}>
+                          <button
+                            onClick={() => editHabit(habit.id)}
+                            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--c-surface-soft)]"
+                            style={{ color: C.text }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit habit
+                          </button>
                           <button
                             onClick={() => deleteHabit(habit.id)}
                             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"

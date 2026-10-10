@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useSparksState } from "../../store/gamification";
 import { Plus, Sparkles } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useHabits } from "@repo/query/habits/useHabits";
-import { useCreateHabit, useDeleteHabit, useToggleHabit } from "@repo/query/habits/useMutations";
+import { useCreateHabit, useDeleteHabit, useToggleHabit, useUpdateHabit } from "@repo/query/habits/useMutations";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { toast } from "react-hot-toast";
 
 import { AddHabitModal } from "../../components/habits/add-habit-modal";
 import { C } from "../../components/habits/constants";
@@ -27,11 +29,21 @@ type FetchedHabit = {
   description?: string | null;
   time?: string | null;
   logs?: Habit["logs"] | null;
+  color?: string | null;
+  mode?: string | null;
+  days?: number[] | null;
+  perWeek?: number | null;
+  goal?: string | null;
+  target?: number | null;
+  unit?: string | null;
+  why?: string | null;
+  mini?: string | null;
 };
 
 export default function MomentumApp() {
   const [activeTab, setActiveTab] = useState<HabitTabId>("Insights");
-  const { data: fetchedHabits = [] } = useHabits();
+  const { data: session } = useSession();
+  const { data: fetchedHabits = [] } = useHabits((session?.user as any)?.id);
   const createHabitMutation = useCreateHabit();
   const deleteHabitMutation = useDeleteHabit();
   const toggleHabitMutation = useToggleHabit();
@@ -43,6 +55,15 @@ export default function MomentumApp() {
       category: h.description || h.time || undefined,
       best: 0,
       logs: h.logs || [],
+      color: h.color || undefined,
+      mode: h.mode || undefined,
+      days: h.days || undefined,
+      perWeek: h.perWeek || undefined,
+      goal: h.goal || undefined,
+      target: h.target || undefined,
+      unit: h.unit || undefined,
+      why: h.why || undefined,
+      mini: h.mini || undefined,
     }));
   }, [fetchedHabits]);
 
@@ -50,9 +71,6 @@ export default function MomentumApp() {
   const [primaryColor, setPrimaryColor] = useState("22, 163, 74");
 
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState("");
-
   const [weekOffset, setWeekOffset] = useState(0);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
@@ -61,6 +79,9 @@ export default function MomentumApp() {
 
   const [ownedThemes, setOwnedThemes] = useState(["green"]);
   const [activeTheme, setActiveTheme] = useState("green");
+
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const updateHabitMutation = useUpdateHabit();
 
   const toggleDay = (habitId: string, dayIndex: number, weekOff: number = weekOffset) => {
     const start = baseMonday(weekOff);
@@ -79,31 +100,86 @@ export default function MomentumApp() {
           if (status === "completed") setSparks((s) => s + 5);
           else setSparks((s) => Math.max(0, s - 5));
         },
+        onError: (error: any) => {
+          toast.error(error.response?.data?.message || error.message || "Failed to sync habit status.");
+        }
       }
     );
   };
 
   const deleteHabit = (habitId: string) => {
-    deleteHabitMutation.mutate(habitId);
+    deleteHabitMutation.mutate(habitId, {
+      onSuccess: () => toast.success("Habit deleted successfully!"),
+      onError: (error: any) => toast.error(error.response?.data?.message || error.message || "Failed to delete habit."),
+    });
     setMenuOpenId(null);
   };
 
-  const addHabit = () => {
-    if (!newName.trim()) return;
+  const saveHabit = (draft: any) => {
+    const userId = (session?.user as any)?.id;
 
-    createHabitMutation.mutate(
-      {
-        title: newName.trim(),
-        description: newCategory.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          setNewName("");
-          setNewCategory("");
-          setAddOpen(false);
+    if (editingHabitId) {
+      updateHabitMutation.mutate(
+        {
+          id: editingHabitId,
+          data: {
+            title: draft.name,
+            description: draft.why || undefined,
+            color: draft.color,
+            mode: draft.mode,
+            days: draft.days,
+            perWeek: draft.perWeek,
+            goal: draft.goal,
+            target: draft.target,
+            unit: draft.unit,
+            why: draft.why,
+            mini: draft.mini,
+          }
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            setAddOpen(false);
+            setEditingHabitId(null);
+            toast.success("Habit updated successfully!");
+          },
+          onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || "Failed to update habit.");
+          }
+        }
+      );
+    } else {
+      createHabitMutation.mutate(
+        {
+          title: draft.name,
+          description: draft.why || undefined,
+          color: draft.color,
+          mode: draft.mode,
+          days: draft.days,
+          perWeek: draft.perWeek,
+          goal: draft.goal,
+          target: draft.target,
+          unit: draft.unit,
+          why: draft.why,
+          mini: draft.mini,
+          userId
+        },
+        {
+          onSuccess: () => {
+            setAddOpen(false);
+            toast.success("Habit created successfully!");
+          },
+          onError: (error: any) => {
+            toast.error(error.response?.data?.message || error.message || "Failed to create habit.");
+          }
+        }
+      );
+    }
+  };
+
+  const openEditModal = (habitId: string) => {
+    setEditingHabitId(habitId);
+    setAddOpen(true);
+    setMenuOpenId(null);
   };
 
   const habitRows = useMemo<HabitRow[]>(
@@ -140,6 +216,7 @@ export default function MomentumApp() {
         setWeekOffset={setWeekOffset}
         toggleDay={toggleDay}
         deleteHabit={deleteHabit}
+        editHabit={openEditModal}
         menuOpenId={menuOpenId}
         setMenuOpenId={setMenuOpenId}
       />
@@ -191,7 +268,10 @@ export default function MomentumApp() {
           <div className="flex items-center gap-3 self-start sm:self-auto">
             <Button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={() => {
+                setEditingHabitId(null);
+                setAddOpen(true);
+              }}
               className="group h-12 rounded-full bg-[#22C55E] px-5 font-medium text-[#06120B] transition hover:bg-[#4ADE80] active:scale-95"
             >
               <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
@@ -205,12 +285,14 @@ export default function MomentumApp() {
 
       {addOpen && (
         <AddHabitModal
-          newName={newName}
-          setNewName={setNewName}
-          newCategory={newCategory}
-          setNewCategory={setNewCategory}
-          onClose={() => setAddOpen(false)}
-          onCreate={addHabit}
+          open={addOpen}
+          onClose={() => {
+            setAddOpen(false);
+            setEditingHabitId(null);
+          }}
+          onCreate={saveHabit}
+          isSubmitting={editingHabitId ? updateHabitMutation.isPending : createHabitMutation.isPending}
+          habitToEdit={editingHabitId ? habits.find(h => h.id === editingHabitId) : null}
         />
       )}
     </div>

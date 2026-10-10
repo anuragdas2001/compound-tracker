@@ -40,6 +40,12 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum Plan {
+  STARTER
+  PRO
+  ELITE
+}
+
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
@@ -47,7 +53,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  plan          String    @default("FREE")
+  plan          Plan      @default(STARTER)
   
   accounts      Account[]
   sessions      Session[]
@@ -76,10 +82,17 @@ model Habit {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
   title String
-
   description String?
-
   color String?
+
+  mode String @default("daily")
+  days Int[]
+  perWeek Int @default(3)
+  goal String @default("done")
+  target Int @default(1)
+  unit String?
+  why String?
+  mini String?
 
   archived Boolean @default(false)
 

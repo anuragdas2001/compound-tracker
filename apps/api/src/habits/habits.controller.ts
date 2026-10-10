@@ -25,8 +25,11 @@ import {
     create(
       @Body() dto: CreateHabitDto,
     ) {
-      const userId =
-        "replace-with-auth-user-id";
+      console.log("Received habit create payload:", dto);
+      const userId = dto.userId;
+      if (!userId) {
+        throw new Error("Missing userId in payload");
+      }
   
       return this.habitsService.create(
         userId,

@@ -101,10 +101,14 @@ export default function DashboardPage() {
   });
 
   const handleAddSuggested = (suggested: typeof SUGGESTED_HABITS[0]) => {
+    const userId = (session?.user as any)?.id;
+    console.log("Adding suggested habit", suggested.title, "for user", userId);
+
     createHabit({
       title: suggested.title,
       description: suggested.description,
-      color: '#22c55e'
+      color: '#22c55e',
+      userId
     });
   };
 
@@ -146,31 +150,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {activeCount === 0 && !isLoading ? (
-          <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
-            <h2 className="mb-6 text-xl text-[var(--c-text)]" style={fontDisplay}>
-              Suggested Habits
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {SUGGESTED_HABITS.map(suggested => (
-                <div key={suggested.title} className="flex flex-col justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-surface-soft)] p-5">
-                  <div>
-                    <suggested.icon className="mb-3 text-[var(--c-primary)]" size={24} />
-                    <h3 className="font-semibold text-[var(--c-text)]">{suggested.title}</h3>
-                    <p className="mt-1 text-sm text-[var(--c-muted)]">{suggested.description}</p>
-                  </div>
-                  <button 
-                    onClick={() => handleAddSuggested(suggested)}
-                    disabled={isCreating}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--c-primary)]/10 py-2 text-sm font-medium text-[var(--c-primary)] transition-colors hover:bg-[var(--c-primary)]/20"
-                  >
-                    <Plus size={16} /> Add Habit
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : (
+        {activeCount > 0 || isLoading ? (
           <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--c-muted)]" style={fontMono}>
@@ -212,7 +192,44 @@ export default function DashboardPage() {
               links forged today.
             </p>
           </section>
-        )}
+        ) : null}
+
+        {(() => {
+          const availableSuggestions = SUGGESTED_HABITS.filter(
+            (sh) => !computedHabits.some((ch) => ch.title === sh.title)
+          );
+
+          if (availableSuggestions.length === 0 || isLoading) return null;
+
+          return (
+            <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
+              <h2 className="mb-6 text-xl text-[var(--c-text)]" style={fontDisplay}>
+                Suggested Habits
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {availableSuggestions.map((suggested) => (
+                  <div
+                    key={suggested.title}
+                    className="flex flex-col justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-surface-soft)] p-5"
+                  >
+                    <div>
+                      <suggested.icon className="mb-3 text-[var(--c-primary)]" size={24} />
+                      <h3 className="font-semibold text-[var(--c-text)]">{suggested.title}</h3>
+                      <p className="mt-1 text-sm text-[var(--c-muted)]">{suggested.description}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddSuggested(suggested)}
+                      disabled={isCreating}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--c-primary)]/10 py-2 text-sm font-medium text-[var(--c-primary)] transition-colors hover:bg-[var(--c-primary)]/20"
+                    >
+                      <Plus size={16} /> Add Habit
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

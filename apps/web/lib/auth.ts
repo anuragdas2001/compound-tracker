@@ -70,18 +70,23 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      console.log("[NextAuth] Session callback token:", token);
+      console.log("[NextAuth] Session callback original session:", session);
       if (token && session.user) {
+        const userId = token.id || token.sub;
         // @ts-expect-error adding custom id to session
-        session.user.id = token.id;
+        session.user.id = userId;
 
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { emailVerified: true, plan: true }
-        });
-        // @ts-expect-error adding custom properties
-        session.user.emailVerified = dbUser?.emailVerified || null;
-        // @ts-expect-error adding custom properties
-        session.user.plan = dbUser?.plan || 'FREE';
+        if (userId) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId as string },
+            select: { emailVerified: true, plan: true }
+          });
+          // @ts-expect-error adding custom properties
+          session.user.emailVerified = dbUser?.emailVerified || null;
+          // @ts-expect-error adding custom properties
+          session.user.plan = dbUser?.plan || 'STARTER';
+        }
       }
       return session;
     },

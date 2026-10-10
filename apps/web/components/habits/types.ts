@@ -8,6 +8,15 @@ export type Habit = {
   best: number;
   category?: string;
   logs: HabitLog[];
+  color?: string;
+  mode?: string;
+  days?: number[];
+  perWeek?: number;
+  goal?: string;
+  target?: number;
+  unit?: string;
+  why?: string;
+  mini?: string;
 };
 
 export type HabitRow = Habit & {

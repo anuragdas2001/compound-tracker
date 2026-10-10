@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 import {CreateHabitDto,UpdateHabitDto} from "@repo/api";
@@ -13,10 +13,33 @@ export class HabitsService {
     userId: string,
     dto: CreateHabitDto,
   ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    });
+
+    if (user?.plan === "STARTER") {
+      const activeHabitsCount = await this.prisma.habit.count({
+        where: { userId, archived: false },
+      });
+
+      if (activeHabitsCount >= 3) {
+        throw new ForbiddenException(
+          "You have reached the limit of 3 habits on the Starter plan. Upgrade to Pro to track unlimited habits."
+        );
+      }
+
+      if (dto.mode && dto.mode !== "daily") {
+        throw new ForbiddenException(
+          "Custom habit schedules are only available on the Pro plan."
+        );
+      }
+    }
+
     return this.prisma.habit.create({
       data: {
         ...dto,
-        userId:"68595c0f4d4d3dbd7b2b7f5a",
+        userId,
       },
     });
   }
@@ -49,6 +72,26 @@ export class HabitsService {
     id: string,
     dto: UpdateHabitDto,
   ) {
+    const habit = await this.prisma.habit.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    
+    if (!habit) throw new NotFoundException("Habit not found");
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: habit.userId },
+      select: { plan: true },
+    });
+
+    if (user?.plan === "STARTER") {
+      if (dto.mode && dto.mode !== "daily") {
+        throw new ForbiddenException(
+          "Custom habit schedules are only available on the Pro plan."
+        );
+      }
+    }
+
     return this.prisma.habit.update({
       where: { id },
       data: dto,

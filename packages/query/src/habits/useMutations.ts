@@ -6,7 +6,7 @@ export const useCreateHabit = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { title: string; description?: string; color?: string }) => {
+    mutationFn: async (data: { title: string; description?: string; color?: string; userId?: string; mode?: string; days?: number[]; perWeek?: number; goal?: string; target?: number; unit?: string; why?: string; mini?: string; }) => {
       const response = await habitService.createHabit(data);
       return response.data;
     },
@@ -36,6 +36,20 @@ export const useToggleHabit = () => {
   return useMutation({
     mutationFn: async ({ id, completedAt }: { id: string; completedAt?: string }) => {
       const response = await habitService.toggleHabit(id, completedAt);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitQueryKeys.all });
+    },
+  });
+};
+
+export const useUpdateHabit = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { title?: string; description?: string; color?: string; mode?: string; days?: number[]; perWeek?: number; goal?: string; target?: number; unit?: string; why?: string; mini?: string; } }) => {
+      const response = await habitService.updateHabit(id, data);
       return response.data;
     },
     onSuccess: () => {

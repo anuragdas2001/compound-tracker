@@ -20,6 +20,7 @@ import {
   Flame,
   User,
   BadgeCheck,
+  Zap,
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
@@ -159,8 +160,31 @@ export function AppSidebar({
           })}
         </nav>
 
+        {/* SUBSCRIPTION PLAN CARD */}
+        {!isCollapsed && (
+          <div className="mx-3 mb-1 rounded-[8px] bg-gradient-to-b from-[var(--c-primary)]/15 to-[var(--c-surface)] border border-[var(--c-primary)]/30 p-4 text-[var(--c-text)] relative overflow-hidden group shadow-[0_4px_20px_rgba(34,197,94,0.08)]">
+            <div className="absolute -top-3 -right-3 opacity-10 text-[var(--c-primary)] group-hover:scale-125 transition-transform duration-500">
+               <Zap size={72} className="fill-[var(--c-primary)]" />
+            </div>
+            
+            <div className="flex justify-between items-start mb-3 relative z-10">
+              <div className="flex items-center gap-2 font-bold text-[13px] text-[var(--c-text)] tracking-wide">
+                 <Zap size={16} className="text-[var(--c-primary)] fill-[var(--c-primary)] drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                 Manage Plan
+              </div>
+              <span className="bg-[var(--c-surface)] border border-[var(--c-border)] text-[10px] font-bold px-2.5 py-1 rounded-full text-[var(--c-text)] shadow-sm uppercase">
+                {(session?.user as any)?.plan || 'STARTER'}
+              </span>
+            </div>
+            
+            <p className="text-[11px] text-[var(--c-muted)] leading-relaxed relative z-10">
+              You are currently on the <strong className="text-[var(--c-text)] font-semibold capitalize">{((session?.user as any)?.plan || 'STARTER').toLowerCase()}</strong> plan.
+            </p>
+          </div>
+        )}
+
         {/* BOTTOM USER PROFILE */}
-        <div
+        {/* <div
           className={`px-3 py-4 transition-all border-t border-[var(--c-border)]/50 bg-gradient-to-t from-[var(--c-surface)]/40 to-transparent ${isCollapsed ? 'flex flex-col items-center gap-3' : ''}`}
         >
           {isCollapsed ? (
@@ -194,10 +218,6 @@ export function AppSidebar({
                       <BadgeCheck size={14} className="text-blue-500 flex-none" title="Verified" />
                     ) : null}
                   </div>
-                  
-                  <p className="text-[11px] font-semibold text-[var(--c-primary)] truncate tracking-wider uppercase mt-0.5">
-                    Compound {(session?.user as any)?.plan || 'FREE'}
-                  </p>
                   {!(session?.user as any)?.emailVerified && (
                     <button 
                       onClick={handleVerify} 
@@ -219,7 +239,7 @@ export function AppSidebar({
               </button>
             </div>
           )}
-        </div>
+        </div> */}
       </aside>
     </>
   );

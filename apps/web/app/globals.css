@@ -9,8 +9,8 @@
 :root {
   --c-bg: #FFFFFF;
   --c-surface: #FFFFFF;
-  --c-surface-soft: #FFFFFF;
-  --c-border: #BBF7D0;
+  --c-surface-soft: #F4FAF6;
+  --c-border: #E2EFE7;
   --c-border-hover: #86EFAC;
   --c-primary: #22C55E;
   --c-light: #4ADE80;
@@ -38,4 +38,26 @@
   --c-muted: #7E9486;
   --c-grid: rgba(34, 197, 94, 0.12);
   --c-glow: rgba(34, 197, 94, 0.25);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
