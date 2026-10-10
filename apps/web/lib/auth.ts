@@ -76,10 +76,12 @@ export const authOptions: NextAuthOptions = {
 
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { emailVerified: true }
+          select: { emailVerified: true, plan: true }
         });
-        // @ts-expect-error adding emailVerified
+        // @ts-expect-error adding custom properties
         session.user.emailVerified = dbUser?.emailVerified || null;
+        // @ts-expect-error adding custom properties
+        session.user.plan = dbUser?.plan || 'FREE';
       }
       return session;
     },

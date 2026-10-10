@@ -195,19 +195,18 @@ export function AppSidebar({
                     ) : null}
                   </div>
                   
-                  {/* {(session?.user as any)?.emailVerified ? (
-                    <p className="text-[11px] font-semibold text-[var(--c-primary)] truncate tracking-wider uppercase mt-0.5">
-                      Compound Elite
-                    </p>
-                  ) : (
+                  <p className="text-[11px] font-semibold text-[var(--c-primary)] truncate tracking-wider uppercase mt-0.5">
+                    Compound {(session?.user as any)?.plan || 'FREE'}
+                  </p>
+                  {!(session?.user as any)?.emailVerified && (
                     <button 
                       onClick={handleVerify} 
                       disabled={isVerifying}
-                      className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 truncate tracking-wider uppercase mt-0.5 underline transition-colors"
+                      className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 truncate tracking-wider uppercase mt-0.5 underline transition-colors block"
                     >
                       {isVerifying ? 'Verifying...' : 'Verify Email'}
                     </button>
-                  )} */}
+                  )}
                 </div>
               </div>
 
