@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const activeHabits = realHabits.filter((h) => !h.archived);
   
   // Calculate today's string in local time
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split('T')[0] || '';
 
   const computedHabits = activeHabits.map(h => {
     const completedToday = h.logs?.some(l => (l.completedAt as string).startsWith(todayStr)) || false;
