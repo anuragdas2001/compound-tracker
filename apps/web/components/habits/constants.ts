@@ -16,6 +16,7 @@ export const C = {
   deeper: "var(--c-deeper)",
   text: "var(--c-text)",
   muted: "var(--c-muted)",
+  danger: "var(--c-danger, #ef4444)",
 };
 
 export const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
