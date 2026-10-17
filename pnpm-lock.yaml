@@ -141,6 +141,9 @@ importers:
       '@next-auth/prisma-adapter':
         specifier: ^1.0.7
         version: 1.0.7(@prisma/client@6.19.3)(next-auth@4.24.15)
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@repo/query':
         specifier: workspace:*
         version: link:../../packages/query
