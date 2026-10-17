@@ -7,3 +7,5 @@ export { HabitQueryDto } from './habits/habit-query.dto';
 export { CompleteHabitDto } from './habits/complete-habit.dto';
 export {LoginDto} from "./auth/login.dto";
 export {RegisterDto} from "./auth/register.dto";
+export { PurchaseItemDto } from "./gamification/purchase-item.dto";
+export { UseShieldDto } from "./gamification/use-shield.dto";

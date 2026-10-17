@@ -2,17 +2,20 @@
 
 import { useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSparksState } from "../../store/gamification";
 import { Plus, Sparkles } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useHabits } from "@repo/query/habits/useHabits";
 import { useCreateHabit, useDeleteHabit, useToggleHabit, useUpdateHabit } from "@repo/query/habits/useMutations";
+import { useShieldUsages } from "@repo/query/gamification/useGamificationMutations";
+import { gamificationQueryKeys } from "@repo/query/gamification/queryKeys";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { toast } from "react-hot-toast";
 
 import { AddHabitModal } from "../../components/habits/add-habit-modal";
-import { C } from "../../components/habits/constants";
+import { C, weekDays } from "../../components/habits/constants";
 import type { HabitTabId } from "../../components/habits/constants";
 import { HabitTabs } from "../../components/habits/habit-tabs";
 import { InsightsView } from "../../components/habits/insights-view";
@@ -20,7 +23,7 @@ import { SettingsView } from "../../components/habits/settings-view";
 import { StoreView } from "../../components/habits/store-view";
 import { TodayView } from "../../components/habits/today-view";
 import type { Habit, HabitRow } from "../../components/habits/types";
-import { baseMonday, currentStreak, getGreeting, getWeek } from "../../components/habits/utils";
+import { baseMonday, currentStreak, getGreeting, getWeek, habitStreak } from "../../components/habits/utils";
 
 type FetchedHabit = {
   id: string;
@@ -42,8 +45,11 @@ type FetchedHabit = {
 
 export default function MomentumApp() {
   const [activeTab, setActiveTab] = useState<HabitTabId>("Insights");
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
-  const { data: fetchedHabits = [] } = useHabits((session?.user as any)?.id);
+  const userId = (session?.user as any)?.id;
+  const { data: fetchedHabits = [] } = useHabits(userId);
+  const { data: shieldUsages = [] } = useShieldUsages(userId);
   const createHabitMutation = useCreateHabit();
   const deleteHabitMutation = useDeleteHabit();
   const toggleHabitMutation = useToggleHabit();
@@ -84,9 +90,39 @@ export default function MomentumApp() {
   const updateHabitMutation = useUpdateHabit();
 
   const toggleDay = (habitId: string, dayIndex: number, weekOff: number = weekOffset) => {
+    const habit = habits.find((h) => h.id === habitId);
     const start = baseMonday(weekOff);
     const targetDate = new Date(start);
     targetDate.setDate(start.getDate() + dayIndex);
+    targetDate.setHours(12, 0, 0, 0);
+
+    const isAlreadyCompleted = habit && habit.logs?.some((log) => {
+      const logDate = new Date(log.completedAt);
+      return (
+        logDate.getFullYear() === targetDate.getFullYear() &&
+        logDate.getMonth() === targetDate.getMonth() &&
+        logDate.getDate() === targetDate.getDate()
+      );
+    });
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const targetDayStart = new Date(targetDate);
+    targetDayStart.setHours(0, 0, 0, 0);
+
+    const isPastDay = targetDayStart.getTime() < todayStart.getTime();
+
+    if (!isAlreadyCompleted && isPastDay) {
+      toast.error(`"${habit?.name || "This habit"}" cannot be marked complete after its scheduled day has passed.`);
+      return;
+    }
+
+    if (!isAlreadyCompleted && habit && habit.mode === "days" && habit.days && habit.days.length > 0) {
+      if (!habit.days.includes(dayIndex)) {
+        toast.error(`"${habit.name}" is not scheduled for ${weekDays[dayIndex]}.`);
+        return;
+      }
+    }
 
     toggleHabitMutation.mutate(
       { id: habitId, completedAt: targetDate.toISOString() },
@@ -99,6 +135,12 @@ export default function MomentumApp() {
 
           if (status === "completed") setSparks((s) => s + 5);
           else setSparks((s) => Math.max(0, s - 5));
+
+          if (userId) {
+            queryClient.invalidateQueries({
+              queryKey: gamificationQueryKeys.summary(userId),
+            });
+          }
         },
         onError: (error: any) => {
           toast.error(error.response?.data?.message || error.message || "Failed to sync habit status.");
@@ -186,10 +228,10 @@ export default function MomentumApp() {
     () =>
       habits.map((habit) => {
         const week = getWeek(habit, weekOffset);
-        const streak = currentStreak(week);
+        const streak = habitStreak(habit.logs, shieldUsages, habit.id);
         return { ...habit, week, streak, best: Math.max(habit.best, streak) };
       }),
-    [habits, weekOffset]
+    [habits, weekOffset, shieldUsages]
   );
 
   const greeting = getGreeting();

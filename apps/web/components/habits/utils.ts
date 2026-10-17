@@ -54,6 +54,33 @@ export function isDateCompleted(logs: HabitLog[] = [], targetDate: Date) {
   });
 }
 
+export function isDateShielded(
+  shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
+  targetDate: Date,
+  habitId?: string
+) {
+  return shields.some((shield) => {
+    if (shield.relatedHabitId && habitId && shield.relatedHabitId !== habitId) {
+      return false;
+    }
+    const sDate = new Date(shield.missedDate);
+    return (
+      sDate.getFullYear() === targetDate.getFullYear() &&
+      sDate.getMonth() === targetDate.getMonth() &&
+      sDate.getDate() === targetDate.getDate()
+    );
+  });
+}
+
+export function isDateActive(
+  logs: HabitLog[] = [],
+  shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
+  targetDate: Date,
+  habitId?: string
+) {
+  return isDateCompleted(logs, targetDate) || isDateShielded(shields, targetDate, habitId);
+}
+
 export function getWeek(habit: { logs: HabitLog[] }, weekOffset: number) {
   const start = baseMonday(weekOffset);
   return Array.from({ length: 7 }, (_, i) => {
@@ -79,12 +106,16 @@ export function getGreeting() {
   return { text: "Good evening", icon: Moon };
 }
 
-export function habitStreak(logs: HabitLog[] = []) {
+export function habitStreak(
+  logs: HabitLog[] = [],
+  shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
+  habitId?: string
+) {
   const d = new Date();
-  if (!isDateCompleted(logs, d)) d.setDate(d.getDate() - 1);
+  if (!isDateActive(logs, shields, d, habitId)) d.setDate(d.getDate() - 1);
 
   let n = 0;
-  while (isDateCompleted(logs, d) && n < 366) {
+  while (isDateActive(logs, shields, d, habitId) && n < 366) {
     n++;
     d.setDate(d.getDate() - 1);
   }

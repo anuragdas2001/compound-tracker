@@ -18,6 +18,16 @@ import {
 import { C, fontDisplay, fontMono, monthNames, weekDays } from "./constants";
 import type { Habit, HabitRow } from "./types";
 import { baseMonday, formatWeekLabel, getMonthWeekOffsets, monthStartOffset } from "./utils";
+import { toast } from "react-hot-toast";
+
+function getScheduleBadge(habit: Habit) {
+  if (habit.mode !== "days" || !habit.days || habit.days.length === 0) return null;
+  const d = [...habit.days].sort((a, b) => a - b);
+  if (d.length === 7) return null;
+  if (d.length === 5 && d.every((x, i) => x === i)) return "Mon-Fri";
+  if (d.length === 2 && d[0] === 5 && d[1] === 6) return "Sat-Sun";
+  return d.map((i) => weekDays[i]).join(", ");
+}
 
 type InsightsViewProps = {
   habits: Habit[];
@@ -62,7 +72,12 @@ export function InsightsView({
     (acc, h) => acc + h.week.filter(Boolean).length,
     0
   );
-  const totalPossible = habits.length * 7 || 1;
+  const totalPossible = habitRows.reduce((acc, h) => {
+    if (h.mode === "days" && h.days && h.days.length > 0) {
+      return acc + h.days.length;
+    }
+    return acc + 7;
+  }, 0) || 1;
   const completionRate = Math.round((totalCompleted / totalPossible) * 100);
   const overallBest = habitRows.length
     ? Math.max(...habitRows.map((h) => h.best))
@@ -71,11 +86,14 @@ export function InsightsView({
   const dailyCompletion = useMemo(
     () =>
       weekDays.map((_, i) => {
-        if (!habits.length) return 0;
-        const done = habitRows.filter((h) => h.week[i]).length;
-        return Math.round((done / habits.length) * 100);
+        const scheduledHabits = habitRows.filter((h) =>
+          h.mode !== "days" || !h.days?.length || h.days.includes(i)
+        );
+        if (!scheduledHabits.length) return 0;
+        const done = scheduledHabits.filter((h) => h.week[i]).length;
+        return Math.round((done / scheduledHabits.length) * 100);
       }),
-    [habitRows, habits.length]
+    [habitRows]
   );
 
   const peakValue = Math.max(...dailyCompletion);
@@ -253,7 +271,7 @@ export function InsightsView({
                       <h3 className="font-medium" style={{ color: C.text }}>
                         {habit.name}
                       </h3>
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
                           style={{ borderColor: `${C.primary}33`, backgroundColor: `${C.primary}1A`, color: C.primary }}
@@ -268,6 +286,14 @@ export function InsightsView({
                           <Trophy className="h-3 w-3" />
                           {habit.best}
                         </span>
+                        {getScheduleBadge(habit) && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                            style={{ borderColor: C.border, color: C.muted, ...fontMono }}
+                          >
+                            {getScheduleBadge(habit)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="relative">
@@ -301,19 +327,70 @@ export function InsightsView({
                   </div>
 
                   <div className="grid grid-cols-7 gap-2">
-                    {habit.week.map((done, dayIndex) => (
-                      <div key={dayIndex} className="flex justify-center">
-                        <button
-                          onClick={() => toggleDay(habit.id, dayIndex, weekOffset)}
-                          className="h-12 w-12 rounded-xl border transition hover:scale-105"
-                          style={
-                            done
-                              ? { borderColor: C.primary, backgroundColor: C.primary }
-                              : { borderColor: C.border, backgroundColor: C.surfaceSoft }
-                          }
-                        />
-                      </div>
-                    ))}
+                    {habit.week.map((done, dayIndex) => {
+                      const isPicked =
+                        habit.mode !== "days" ||
+                        !habit.days?.length ||
+                        habit.days.includes(dayIndex);
+
+                      const targetDate = weekDates[dayIndex];
+                      const isPast = targetDate
+                        ? new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime() <
+                          new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime()
+                        : false;
+
+                      const isExpired = isPast && !done;
+
+                      return (
+                        <div key={dayIndex} className="flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isPicked && !done) {
+                                toast.error(`"${habit.name}" is only scheduled for ${getScheduleBadge(habit) || "selected days"}`);
+                                return;
+                              }
+                              if (isExpired) {
+                                toast.error(`"${habit.name}" cannot be marked complete after ${weekDays[dayIndex]} has passed.`);
+                                return;
+                              }
+                              toggleDay(habit.id, dayIndex, weekOffset);
+                            }}
+                            disabled={(!isPicked && !done) || isExpired}
+                            title={
+                              !isPicked
+                                ? `${habit.name} is not scheduled for ${weekDays[dayIndex]}`
+                                : done
+                                ? `Completed on ${weekDays[dayIndex]}`
+                                : isPast
+                                ? `Missed on ${weekDays[dayIndex]} (expired)`
+                                : `Mark complete for ${weekDays[dayIndex]}`
+                            }
+                            aria-label={`${habit.name} ${weekDays[dayIndex]} ${
+                              done ? "completed" : isExpired ? "expired" : isPicked ? "incomplete" : "not scheduled"
+                            }`}
+                            className={`h-12 w-12 rounded-xl border transition flex items-center justify-center ${
+                              (!isPicked && !done) || isExpired
+                                ? "cursor-not-allowed opacity-30 border-dashed"
+                                : "hover:scale-105 cursor-pointer"
+                            }`}
+                            style={
+                              done
+                                ? { borderColor: C.primary, backgroundColor: C.primary }
+                                : !isPicked || isExpired
+                                ? { borderColor: C.border, backgroundColor: "transparent" }
+                                : { borderColor: C.border, backgroundColor: C.surfaceSoft }
+                            }
+                          >
+                            {!isPicked && !done ? (
+                              <span className="text-sm select-none" style={{ color: C.muted }}>—</span>
+                            ) : isExpired ? (
+                              <span className="text-xs select-none font-bold" style={{ color: C.muted }}>✕</span>
+                            ) : null}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

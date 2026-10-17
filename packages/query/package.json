@@ -11,6 +11,7 @@
     "./habits/useHabits": "./src/habits/useHabits.ts",
     "./habits/useMutations": "./src/habits/useMutations.ts",
     "./gamification/useGamificationSummary": "./src/gamification/useGamificationSummary.ts",
+    "./gamification/useGamificationMutations": "./src/gamification/useGamificationMutations.ts",
     "./gamification/queryKeys": "./src/gamification/queryKeys.ts"
   },
   "peerDependencies": {

@@ -5,7 +5,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   CalendarCheck,
   Check,
-  Clock,
   Flame,
   MessageSquare,
   Plus,
@@ -15,9 +14,13 @@ import {
   Zap,
 } from "lucide-react";
 
+import { useSession } from "next-auth/react";
+import { useShieldUsages } from "@repo/query/gamification/useGamificationMutations";
+import { toast } from "react-hot-toast";
+
 import { C, fontDisplay, fontMono, weekDays } from "./constants";
 import type { Habit } from "./types";
-import { baseMonday, getWeek, isDateCompleted } from "./utils";
+import { baseMonday, getWeek, habitStreak, isDateCompleted } from "./utils";
 
 type TodayViewProps = {
   habits: Habit[];
@@ -40,17 +43,6 @@ const dailyTips = [
   "Your streak is a promise to your future self. Keep it light, keep it going.",
 ];
 
-function habitStreak(logs: { completedAt: string }[] = []) {
-  const d = new Date();
-  if (!isDateCompleted(logs, d)) d.setDate(d.getDate() - 1);
-  let n = 0;
-  while (isDateCompleted(logs, d) && n < 366) {
-    n++;
-    d.setDate(d.getDate() - 1);
-  }
-  return n;
-}
-
 // 1. TODAY VIEW
 export function TodayView({
   habits,
@@ -62,19 +54,36 @@ export function TodayView({
   setDailyNote,
   onAddHabit,
 }: TodayViewProps) {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const { data: shieldUsages = [] } = useShieldUsages(userId);
+
   // Optimistic UI: tick instantly, then fall back to server truth once it changes
   const [optimistic, setOptimistic] = useState<
     Record<string, { base: boolean; value: boolean }>
   >({});
 
+  const isScheduledToday = (h: any) => {
+    if (h.mode === "days" && Array.isArray(h.days) && h.days.length > 0) {
+      return h.days.includes(todayIndex);
+    }
+    return true;
+  };
+
   const todayHabits = habits.map((h: any) => {
     const serverDone = getWeek(h, 0)[todayIndex] || false;
     const o = optimistic[h.id];
     const done = o && o.base === serverDone ? o.value : serverDone;
-    return { ...h, done, serverDone, streak: habitStreak(h.logs) };
+    const scheduled = isScheduledToday(h);
+    return { ...h, done, serverDone, scheduled, streak: habitStreak(h.logs, shieldUsages, h.id) };
   });
 
   const handleToggle = (habit: any) => {
+    if (!habit.scheduled && !habit.done) {
+      toast.error(`"${habit.name}" is not scheduled for today.`);
+      return;
+    }
+
     setOptimistic((prev) => ({
       ...prev,
       [habit.id]: { base: habit.serverDone, value: !habit.done },
@@ -82,13 +91,15 @@ export function TodayView({
     toggleDay(habit.id);
   };
 
-  const pending = todayHabits.filter((h: any) => !h.done);
+  const pending = todayHabits.filter((h: any) => h.scheduled && !h.done);
   const completed = todayHabits.filter((h: any) => h.done);
+  const restHabits = todayHabits.filter((h: any) => !h.scheduled && !h.done);
+
   const completedCount = completed.length;
-  const totalCount = todayHabits.length;
+  const dueCount = todayHabits.filter((h: any) => h.scheduled || h.done).length;
   const progress =
-    totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
-  const isAllDone = totalCount > 0 && completedCount === totalCount;
+    dueCount === 0 ? (todayHabits.length > 0 ? 100 : 0) : Math.round((completedCount / dueCount) * 100);
+  const isAllDone = dueCount > 0 && pending.length === 0;
 
   /* --- Week overview (Mon..Sun) --- */
   const monday = baseMonday(0);
@@ -97,17 +108,25 @@ export function TodayView({
     date.setDate(monday.getDate() + i);
     const isToday = i === todayIndex;
     const isFuture = i > todayIndex;
+    const scheduledForDay = habits.filter((h: any) => {
+      if (h.mode === "days" && Array.isArray(h.days) && h.days.length > 0) {
+        return h.days.includes(i);
+      }
+      return true;
+    });
+    const dayTarget = scheduledForDay.length;
     const done = isToday
       ? completedCount
       : habits.filter((h: any) => isDateCompleted(h.logs, date)).length;
-    const pct = totalCount === 0 || isFuture ? 0 : Math.round((done / totalCount) * 100);
-    return { label, date: date.getDate(), isToday, isFuture, done, pct };
+    const pct = dayTarget === 0 || isFuture ? 0 : Math.min(100, Math.round((done / dayTarget) * 100));
+    return { label, date: date.getDate(), isToday, isFuture, done, dayTarget, pct };
   });
 
   const weekCheckins = weekOverview.reduce((acc, d) => acc + d.done, 0);
-  const weekPossible = totalCount * (todayIndex + 1);
-  const weekRate = weekPossible === 0 ? 0 : Math.round((weekCheckins / weekPossible) * 100);
-  const perfectDays = weekOverview.filter((d) => !d.isFuture && d.pct === 100).length;
+  const pastDaysOverview = weekOverview.slice(0, todayIndex + 1);
+  const weekPossible = pastDaysOverview.reduce((acc, d) => acc + d.dayTarget, 0);
+  const weekRate = weekPossible === 0 ? 0 : Math.min(100, Math.round((weekCheckins / weekPossible) * 100));
+  const perfectDays = pastDaysOverview.filter((d) => d.pct === 100 && d.dayTarget > 0).length;
   const bestStreak = todayHabits.reduce((m: number, h: any) => Math.max(m, h.streak), 0);
 
   const dateLabel = new Date().toLocaleDateString("en-US", {
@@ -125,34 +144,47 @@ export function TodayView({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const headline = isAllDone
+  const headline = habits.length === 0
+    ? "Ready to build?"
+    : isAllDone
     ? "You crushed it."
     : completedCount === 0
     ? "Ready to build?"
     : "Keep going!";
 
-  const subline = isAllDone
-    ? "All habits completed for today. Rest up!"
+  const subline = habits.length === 0
+    ? "Add your first habit to get started."
+    : isAllDone
+    ? "All scheduled habits completed for today. Rest up!"
     : `${pending.length} ${pending.length === 1 ? "habit" : "habits"} left today. Tap one to check it off.`;
 
-  const renderRow = (habit: any, isNext = false) => (
+  const renderRow = (habit: any, isNext = false, isRest = false) => (
     <button
       key={habit.id}
       onClick={() => handleToggle(habit)}
+      disabled={isRest && !habit.done}
       aria-pressed={habit.done}
       aria-label={`${habit.done ? "Undo" : "Complete"} ${habit.name}`}
-      className="group flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all duration-200 hover:border-[var(--c-border-hover)] active:scale-[0.99]"
+      className={`group flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all duration-200 ${
+        isRest && !habit.done
+          ? "cursor-not-allowed opacity-60 border-dashed"
+          : "hover:border-[var(--c-border-hover)] active:scale-[0.99]"
+      }`}
       style={{
         borderColor: isNext ? `${C.primary}55` : C.border,
-        backgroundColor: habit.done ? C.surface : C.surfaceSoft,
+        backgroundColor: habit.done ? C.surface : isRest ? "transparent" : C.surfaceSoft,
       }}
     >
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
-          habit.done ? "" : "group-hover:border-[var(--c-primary)] group-hover:bg-[var(--c-primary)]/10"
+          habit.done
+            ? ""
+            : isRest
+            ? "border-dashed"
+            : "group-hover:border-[var(--c-primary)] group-hover:bg-[var(--c-primary)]/10"
         }`}
         style={{
-          borderColor: habit.done ? C.primary : C.borderHover,
+          borderColor: habit.done ? C.primary : isRest ? `${C.borderHover}80` : C.borderHover,
           backgroundColor: habit.done ? C.primary : "transparent",
         }}
       >
@@ -169,7 +201,7 @@ export function TodayView({
         <span className="flex items-center gap-2">
           <span
             className={`block truncate font-medium transition-colors ${habit.done ? "line-through" : ""}`}
-            style={{ color: habit.done ? C.muted : C.text }}
+            style={{ color: habit.done ? C.muted : isRest ? C.muted : C.text }}
           >
             {habit.name}
           </span>
@@ -179,6 +211,14 @@ export function TodayView({
               style={{ backgroundColor: `${C.primary}1A`, color: C.primary, ...fontMono }}
             >
               Up next
+            </span>
+          )}
+          {isRest && (
+            <span
+              className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+              style={{ borderColor: C.border, backgroundColor: C.surface, color: C.muted, ...fontMono }}
+            >
+              Rest day
             </span>
           )}
         </span>
@@ -201,7 +241,7 @@ export function TodayView({
             {habit.streak}
           </span>
         )}
-        {!habit.done && (
+        {!habit.done && !isRest && (
           <span className="hidden items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-400 sm:inline-flex">
             <Sparkles className="h-3 w-3" />+5
           </span>
@@ -233,7 +273,7 @@ export function TodayView({
               {headline}
             </h1>
             <p className="mt-2 text-sm sm:text-base" style={{ color: C.muted }}>
-              {totalCount === 0 ? "Add your first habit to get started." : subline}
+              {habits.length === 0 ? "Add your first habit to get started." : subline}
             </p>
           </div>
 
@@ -258,7 +298,7 @@ export function TodayView({
                 {progress}%
               </span>
               <span className="text-[10px]" style={{ color: C.muted, ...fontMono }}>
-                {completedCount}/{totalCount}
+                {completedCount}/{dueCount}
               </span>
             </div>
           </div>
@@ -266,7 +306,7 @@ export function TodayView({
 
         {/* HABITS */}
         <section className="space-y-6">
-          {totalCount === 0 ? (
+          {habits.length === 0 ? (
             <div
               className="rounded-2xl border border-dashed p-10 text-center"
               style={{ borderColor: C.border, backgroundColor: C.surface, color: C.muted }}
@@ -287,7 +327,7 @@ export function TodayView({
             </div>
           ) : (
             <>
-              {isAllDone ? (
+              {isAllDone && (
                 <div
                   className="flex flex-col items-center justify-center rounded-2xl border p-10 text-center"
                   style={{ borderColor: C.border, backgroundColor: C.surface }}
@@ -302,10 +342,12 @@ export function TodayView({
                     Perfect Day
                   </h3>
                   <p className="text-sm" style={{ color: C.muted }}>
-                    Everything is done. Come back tomorrow to keep the chain going.
+                    Everything scheduled for today is done. Come back tomorrow to keep the chain going.
                   </p>
                 </div>
-              ) : (
+              )}
+
+              {pending.length > 0 && (
                 <div className="space-y-3">
                   <h3
                     className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -313,7 +355,7 @@ export function TodayView({
                   >
                     To do · {pending.length}
                   </h3>
-                  {pending.map((h: any, i: number) => renderRow(h, i === 0))}
+                  {pending.map((h: any, i: number) => renderRow(h, i === 0, false))}
                 </div>
               )}
 
@@ -330,7 +372,24 @@ export function TodayView({
                       Tap to undo
                     </span>
                   </div>
-                  {completed.map((h: any) => renderRow(h))}
+                  {completed.map((h: any) => renderRow(h, false, false))}
+                </div>
+              )}
+
+              {restHabits.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className="text-xs font-semibold uppercase tracking-[0.2em]"
+                      style={{ color: C.muted, ...fontMono }}
+                    >
+                      Rest Day · {restHabits.length}
+                    </h3>
+                    <span className="text-xs" style={{ color: `${C.muted}99` }}>
+                      Not scheduled for today
+                    </span>
+                  </div>
+                  {restHabits.map((h: any) => renderRow(h, false, true))}
                 </div>
               )}
 
@@ -397,7 +456,7 @@ export function TodayView({
           </div>
           <div className="grid grid-cols-7 gap-1">
             {weekOverview.map((d) => {
-              const full = d.pct === 100;
+              const full = d.pct === 100 && d.dayTarget > 0;
               return (
                 <div
                   key={d.label}
@@ -415,7 +474,7 @@ export function TodayView({
                       background: `conic-gradient(${C.primary} ${d.pct * 3.6}deg, ${C.border} 0deg)`,
                       boxShadow: d.isToday ? `0 0 0 2px ${C.surface}, 0 0 0 3px ${C.primary}` : "none",
                     }}
-                    title={`${d.done}/${totalCount} done`}
+                    title={`${d.done}/${d.dayTarget} done`}
                   >
                     <div
                       className="flex h-full w-full items-center justify-center rounded-full text-[11px] font-medium"

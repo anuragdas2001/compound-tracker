@@ -1,5 +1,6 @@
-import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { GamificationService } from "../gamification/gamification.service";
 
 import {CreateHabitDto,UpdateHabitDto} from "@repo/api";
 
@@ -7,6 +8,7 @@ import {CreateHabitDto,UpdateHabitDto} from "@repo/api";
 export class HabitsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly gamificationService: GamificationService,
   ) {}
 
   async create(
@@ -121,20 +123,61 @@ export class HabitsService {
     habitId: string,
     completedAt?: string,
   ) {
-    return this.prisma.habitLog.create({
+    const habit = await this.prisma.habit.findUnique({
+      where: { id: habitId },
+      select: { userId: true, mode: true, days: true },
+    });
+
+    if (!habit) {
+      throw new NotFoundException("Habit not found");
+    }
+
+    const date = completedAt ? new Date(completedAt) : new Date();
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const targetDayStart = new Date(date);
+    targetDayStart.setHours(0, 0, 0, 0);
+
+    if (targetDayStart.getTime() < todayStart.getTime()) {
+      throw new BadRequestException("Cannot mark habits complete after their scheduled day has passed.");
+    }
+
+    if (habit.mode === "days" && habit.days && habit.days.length > 0) {
+      const dayIndex = (date.getDay() + 6) % 7;
+      const utcDayIndex = (date.getUTCDay() + 6) % 7;
+      if (!habit.days.includes(dayIndex) && !habit.days.includes(utcDayIndex)) {
+        throw new BadRequestException("This habit is not scheduled for this day.");
+      }
+    }
+
+    const log = await this.prisma.habitLog.create({
       data: {
         habitId,
-        completedAt: completedAt
-          ? new Date(completedAt)
-          : new Date(),
+        completedAt: date,
       },
     });
+
+    if (habit.userId) {
+      await this.gamificationService.awardHabitCompletion(habit.userId, habitId, log.id);
+    }
+
+    return log;
   }
 
   async toggleHabit(
     habitId: string,
     completedAt?: string,
   ) {
+    const habit = await this.prisma.habit.findUnique({
+      where: { id: habitId },
+      select: { userId: true, mode: true, days: true },
+    });
+
+    if (!habit) {
+      throw new NotFoundException("Habit not found");
+    }
+
     const date = completedAt ? new Date(completedAt) : new Date();
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -152,19 +195,47 @@ export class HabitsService {
     });
 
     if (existingLogs.length > 0) {
+      const logIdToRevoke = existingLogs[0]?.id;
       await this.prisma.habitLog.deleteMany({
         where: {
           id: { in: existingLogs.map((l) => l.id) },
         },
       });
+
+      if (habit.userId && logIdToRevoke) {
+        await this.gamificationService.revokeHabitCompletion(habit.userId, habitId, logIdToRevoke);
+      }
+
       return { status: "uncompleted" };
     } else {
-      await this.prisma.habitLog.create({
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const targetDayStart = new Date(date);
+      targetDayStart.setHours(0, 0, 0, 0);
+
+      if (targetDayStart.getTime() < todayStart.getTime()) {
+        throw new BadRequestException("Cannot mark habits complete after their scheduled day has passed.");
+      }
+
+      if (habit.mode === "days" && habit.days && habit.days.length > 0) {
+        const dayIndex = (date.getDay() + 6) % 7;
+        const utcDayIndex = (date.getUTCDay() + 6) % 7;
+        if (!habit.days.includes(dayIndex) && !habit.days.includes(utcDayIndex)) {
+          throw new BadRequestException("This habit is not scheduled for this day.");
+        }
+      }
+
+      const log = await this.prisma.habitLog.create({
         data: {
           habitId,
           completedAt: date,
         },
       });
+
+      if (habit.userId) {
+        await this.gamificationService.awardHabitCompletion(habit.userId, habitId, log.id);
+      }
+
       return { status: "completed" };
     }
   }
