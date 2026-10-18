@@ -10,7 +10,7 @@ class CopyPrismaPlugin {
         if (fs.existsSync(dotPrisma)) {
           const files = fs.readdirSync(dotPrisma);
           for (const file of files) {
-            if (file.endsWith('.node') || file.includes('query_engine')) {
+            if (file.endsWith('.node') || file.includes('query_engine') || file.endsWith('.prisma')) {
               const src = path.join(dotPrisma, file);
               const destDist = path.join(compiler.outputPath, file);
               const destApi = path.join(__dirname, file);
@@ -20,8 +20,14 @@ class CopyPrismaPlugin {
             }
           }
         }
+        const schemaPath = path.resolve(__dirname, '../../packages/db/prisma/schema.prisma');
+        if (fs.existsSync(schemaPath)) {
+          fs.copyFileSync(schemaPath, path.join(compiler.outputPath, 'schema.prisma'));
+          fs.copyFileSync(schemaPath, path.join(__dirname, 'schema.prisma'));
+          console.log('[CopyPrismaPlugin] Copied schema.prisma to dist and apps/api');
+        }
       } catch (e) {
-        console.warn('[CopyPrismaPlugin] Warning copying Prisma engines:', e.message);
+        console.warn('[CopyPrismaPlugin] Warning copying Prisma engines/schema:', e.message);
       }
     });
   }

@@ -3,6 +3,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { Express } from 'express';
 
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './all-exceptions.filter';
 
 let cachedServer: Express;
 
@@ -13,7 +14,8 @@ async function bootstrapServer(): Promise<Express> {
       AppModule,
       new ExpressAdapter(expressApp),
     );
-    app.setGlobalPrefix('api', { exclude: ['/'] });
+    app.setGlobalPrefix('api');
+    app.useGlobalFilters(new AllExceptionsFilter());
     app.enableCors({
       origin: process.env.FRONTEND_URL || true,
       credentials: true,
@@ -34,6 +36,7 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Content-Type', 'application/json');
     res.end(
       JSON.stringify({
+        statusCode: 500,
         error: 'NestJS Initialization Error',
         message: error?.message || String(error),
         name: error?.name,
@@ -52,7 +55,8 @@ if (typeof module !== 'undefined' && module.exports) {
 if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
   async function localBootstrap() {
     const app = await NestFactory.create(AppModule);
-    app.setGlobalPrefix('api', { exclude: ['/'] });
+    app.setGlobalPrefix('api');
+    app.useGlobalFilters(new AllExceptionsFilter());
     app.enableCors({
       origin: process.env.FRONTEND_URL || true,
       credentials: true,
