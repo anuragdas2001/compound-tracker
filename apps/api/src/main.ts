@@ -25,8 +25,22 @@ async function bootstrapServer(): Promise<Express> {
 }
 
 export default async function handler(req: any, res: any) {
-  const server = await bootstrapServer();
-  return server(req, res);
+  try {
+    const server = await bootstrapServer();
+    return server(req, res);
+  } catch (error: any) {
+    console.error('Fatal initialization error in NestJS serverless handler:', error);
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        error: 'NestJS Initialization Error',
+        message: error?.message || String(error),
+        name: error?.name,
+        stack: error?.stack,
+      }),
+    );
+  }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -11,6 +11,10 @@ import {
     implements OnModuleInit
   {
     async onModuleInit() {
-      await this.$connect();
+      try {
+        await this.$connect();
+      } catch (error) {
+        console.error('[PrismaService] Database connection error during onModuleInit:', error);
+      }
     }
   }
