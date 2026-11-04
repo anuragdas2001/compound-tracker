@@ -314,7 +314,7 @@ export default function MomentumApp() {
                 setEditingHabitId(null);
                 setAddOpen(true);
               }}
-              className="group h-12 rounded-full bg-[#22C55E] px-5 font-medium text-[#06120B] transition hover:bg-[#4ADE80] active:scale-95"
+              className="group h-12 rounded-full bg-[#A8FE43] px-5 font-medium text-[#06120B] transition hover:bg-[#4ADE80] active:scale-95"
             >
               <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
               <span>New Habit</span>

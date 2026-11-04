@@ -34,7 +34,7 @@ function HabitTabsShell({ activeTab, onTabChange, children }: HabitTabsShellProp
         }}
       >
         <div
-          className="no-scrollbar flex items-center gap-1 overflow-x-auto"
+          className="no-scrollbar flex items-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Habit sections"
         >
@@ -54,8 +54,8 @@ function HabitTabsShell({ activeTab, onTabChange, children }: HabitTabsShellProp
                 onClick={() => onTabChange(item.id)}
                 className={`relative h-11 rounded-xl px-4 text-sm transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--c-primary)] font-semibold text-white dark:text-[#06120B] hover:bg-[var(--c-light)] hover:text-white dark:hover:text-[#06120B]"
-                    : "text-[var(--c-muted)] hover:bg-black/5 dark:hover:bg-white/[0.04] hover:text-[var(--c-text)]"
+                    ? "bg-[var(--c-primary)] font-semibold text-white dark:text-[#06120B]  hover:text-white dark:hover:text-[#06120B]"
+                    : "text-[var(--c-muted)] hover:bg-black/5 dark:hover:bg-white/[0.04]"
                 }`}
               >
                 <Icon className={`h-4 w-4 transition-transform ${isActive ? "scale-110" : ""}`} />
