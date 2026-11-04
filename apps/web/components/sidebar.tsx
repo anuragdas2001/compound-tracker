@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -110,8 +111,15 @@ export function AppSidebar({
           }`}
         >
           <Link href="/" className="flex items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 transition-all hover:bg-[var(--c-surface-soft)]/50 group">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] bg-[var(--c-primary)]/10 border border-[var(--c-primary)]/30 text-[var(--c-primary)] shadow-[0_0_15px_rgba(34,197,94,0.15)] group-hover:scale-105 transition-transform duration-300">
-              <Flame size={22} className="fill-[var(--c-primary)]/20" />
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] bg-[var(--c-primary)]/10 border border-[var(--c-primary)]/30 p-1 shadow-[0_0_15px_rgba(34,197,94,0.15)] group-hover:scale-105 transition-transform duration-300">
+              <Image
+                src="/brand_logo.png"
+                alt="Compound Logo"
+                width={36}
+                height={36}
+                className="h-full w-full object-contain"
+                priority
+              />
             </div>
             {!isCollapsed && (
               <span className="text-2xl font-bold tracking-tight text-[var(--c-text)] drop-shadow-sm" style={fontDisplay}>

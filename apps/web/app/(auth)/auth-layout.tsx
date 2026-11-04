@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Check, Flame, ShieldCheck, Sparkles } from 'lucide-react';
 import {
@@ -474,8 +475,15 @@ export default function AuthLayout({
         >
           <motion.div variants={item}>
             <Link href="/" className="group mb-9 inline-flex items-center gap-3">
-              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/25 to-primary/5 shadow-[0_0_24px_rgba(34,197,94,0.25)] transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_38px_rgba(34,197,94,0.5)]">
-                <Flame className="h-6 w-6 text-primary transition-transform duration-500 group-hover:rotate-12" />
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/25 to-primary/5 p-1.5 shadow-[0_0_24px_rgba(34,197,94,0.25)] transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_38px_rgba(34,197,94,0.5)]">
+                <Image
+                  src="/brand_logo.png"
+                  alt="Compound Logo"
+                  width={44}
+                  height={44}
+                  className="h-full w-full object-contain"
+                  priority
+                />
               </div>
               <span className="text-3xl font-extrabold tracking-tighter text-white">Compound</span>
             </Link>
@@ -515,8 +523,16 @@ export default function AuthLayout({
           >
             {/* mobile brand */}
             <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
-              <Link href="/" className="flex items-center gap-2">
-                <Flame className="h-6 w-6 text-primary" />
+              <Link href="/" className="flex items-center gap-2.5">
+                <div className="relative flex h-8 w-8 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 p-1">
+                  <Image
+                    src="/brand_logo.png"
+                    alt="Compound Logo"
+                    width={28}
+                    height={28}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <span className="text-2xl font-extrabold tracking-tighter text-white">Compound</span>
               </Link>
               <span className="flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">

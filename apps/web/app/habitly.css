@@ -1,0 +1,407 @@
+/* ==========================================================================
+   Habitly.dev landing page
+   Tokens are sampled from the logo: charcoal ground, lime-to-emerald flame,
+   mint-white wordmark. Everything is scoped under .hb so it cannot clash with
+   the rest of the app's theme.
+   ========================================================================== */
+
+.hb {
+  --hb-ink: #0c0d11;
+  --hb-panel: #13151b;
+  --hb-panel-raised: #181b22;
+  --hb-line: rgba(232, 255, 241, 0.08);
+  --hb-line-strong: rgba(232, 255, 241, 0.16);
+  --hb-mint: #e8fff1;
+  --hb-muted: rgba(232, 255, 241, 0.64);
+  --hb-faint: rgba(232, 255, 241, 0.4);
+  --hb-lime: #a8fe43;
+  --hb-emerald: #3ae484;
+  --hb-teal: #10a271;
+  --hb-flame: linear-gradient(135deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+
+  /* heat ramp, level 0 (nothing) to 4 (everything done) */
+  --hb-heat-0: rgba(232, 255, 241, 0.06);
+  --hb-heat-1: #17402e;
+  --hb-heat-2: #1c7a50;
+  --hb-heat-3: #34d27f;
+  --hb-heat-4: #a8fe43;
+
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--hb-ink);
+  color: var(--hb-mint);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hb h1,
+.hb h2,
+.hb h3,
+.hb .hb-display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.hb section[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* ---- focus ------------------------------------------------------------- */
+
+.hb a:focus-visible,
+.hb button:focus-visible,
+.hb input:focus-visible + .hb-box {
+  outline: 2px solid var(--hb-lime);
+  outline-offset: 3px;
+}
+
+/* ---- backdrop: the blueprint grid from the logo ------------------------- */
+
+.hb-grid {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 760px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(232, 255, 241, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(232, 255, 241, 0.055) 1px, transparent 1px);
+  background-size: 88px 88px;
+  background-position: center top;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 30%, transparent 75%);
+}
+
+.hb-glow {
+  position: absolute;
+  top: 40px;
+  right: -8%;
+  width: 760px;
+  height: 760px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(58, 228, 132, 0.16) 0%,
+    rgba(168, 254, 67, 0.05) 38%,
+    transparent 68%
+  );
+}
+
+/* ---- header ------------------------------------------------------------- */
+
+.hb-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(12, 13, 17, 0.78);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--hb-line);
+}
+
+.hb-navlink {
+  color: var(--hb-muted);
+  transition: color 0.15s ease;
+}
+.hb-navlink:hover {
+  color: var(--hb-mint);
+}
+
+/* ---- buttons ------------------------------------------------------------ */
+
+.hb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    filter 0.15s ease;
+}
+.hb-btn:active {
+  transform: translateY(1px);
+}
+
+.hb-btn-primary {
+  background: var(--hb-lime);
+  color: #07140c;
+}
+.hb-btn-primary:hover {
+  filter: brightness(1.07);
+}
+
+.hb-btn-ghost {
+  border: 1px solid var(--hb-line-strong);
+  background: rgba(232, 255, 241, 0.03);
+  color: var(--hb-mint);
+}
+.hb-btn-ghost:hover {
+  background: rgba(232, 255, 241, 0.08);
+  border-color: rgba(232, 255, 241, 0.28);
+}
+
+/* ---- surfaces ----------------------------------------------------------- */
+
+.hb-today {
+  position: relative;
+  border-radius: 32px;
+  border: 1px solid var(--hb-line-strong);
+  background:
+    linear-gradient(180deg, rgba(58, 228, 132, 0.06), transparent 40%),
+    var(--hb-panel);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.8);
+}
+
+.hb-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--hb-line);
+  background: var(--hb-panel);
+  transition: border-color 0.2s ease;
+}
+.hb-tile:hover {
+  border-color: rgba(168, 254, 67, 0.28);
+}
+
+.hb-inset {
+  border-radius: 16px;
+  border: 1px solid var(--hb-line);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.hb-cta {
+  position: relative;
+  overflow: hidden;
+  border-radius: 36px;
+  border: 1px solid var(--hb-line-strong);
+  background:
+    radial-gradient(ellipse 60% 90% at 100% 100%, rgba(58, 228, 132, 0.22), transparent 70%),
+    radial-gradient(ellipse 40% 60% at 85% 20%, rgba(168, 254, 67, 0.1), transparent 70%),
+    var(--hb-panel);
+}
+
+/* ---- the flame mark ----------------------------------------------------- */
+
+.hb-flame {
+  filter: drop-shadow(0 0 14px rgba(58, 228, 132, 0.35));
+  transition: filter 0.4s ease;
+}
+.hb-flame[data-lit="true"] {
+  filter: drop-shadow(0 0 22px rgba(168, 254, 67, 0.65));
+}
+.hb-flame[data-bump="true"] {
+  animation: hb-flare 0.7s ease-out;
+}
+
+.hb-streak-num {
+  background: var(--hb-flame);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.hb-streak-num[data-bump="true"] {
+  display: inline-block;
+  animation: hb-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes hb-flare {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.14) rotate(-3deg);
+    filter: drop-shadow(0 0 34px rgba(168, 254, 67, 0.9));
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes hb-pop {
+  0% {
+    transform: translateY(10px) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ---- habit checklist ---------------------------------------------------- */
+
+.hb-habit {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: 16px;
+  border: 1px solid var(--hb-line);
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.hb-habit:hover {
+  border-color: var(--hb-line-strong);
+}
+.hb-habit:has(input:checked) {
+  border-color: rgba(168, 254, 67, 0.28);
+  background: rgba(168, 254, 67, 0.05);
+}
+
+.hb-box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1.5px solid var(--hb-line-strong);
+  color: transparent;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+.hb-habit input:checked + .hb-box {
+  background: var(--hb-lime);
+  border-color: var(--hb-lime);
+  color: #07140c;
+}
+.hb-habit:active .hb-box {
+  transform: scale(0.92);
+}
+
+.hb-habit input:checked ~ .hb-habit-text strong {
+  color: var(--hb-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(232, 255, 241, 0.3);
+}
+
+.hb-seg {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hb-heat-0);
+  transition: background-color 0.25s ease;
+}
+.hb-seg[data-on="true"] {
+  background: var(--hb-flame);
+}
+
+/* ---- heat cells --------------------------------------------------------- */
+
+.hb-heatgrid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.hb-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 5px;
+  background: var(--hb-heat-0);
+}
+.hb-cell[data-l="1"] {
+  background: var(--hb-heat-1);
+}
+.hb-cell[data-l="2"] {
+  background: var(--hb-heat-2);
+}
+.hb-cell[data-l="3"] {
+  background: var(--hb-heat-3);
+}
+.hb-cell[data-l="4"] {
+  background: var(--hb-heat-4);
+}
+
+/* ---- analytics bars ----------------------------------------------------- */
+
+.hb-bar {
+  width: 100%;
+  border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(180deg, var(--hb-heat-3), var(--hb-heat-2));
+}
+.hb-bar[data-peak="true"] {
+  background: var(--hb-flame);
+  box-shadow: 0 0 36px -6px rgba(168, 254, 67, 0.45);
+}
+
+.hb-gridline {
+  border-top: 1px dashed var(--hb-line);
+}
+
+/* ---- notifications ------------------------------------------------------ */
+
+.hb-note {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.875rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--hb-line-strong);
+  background: var(--hb-panel-raised);
+  box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* ---- how it works ------------------------------------------------------- */
+
+.hb-step {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  gap: 1.25rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--hb-line);
+}
+.hb-step:last-child {
+  border-bottom: 1px solid var(--hb-line);
+}
+.hb-step-num {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  border: 1px solid rgba(168, 254, 67, 0.4);
+  color: var(--hb-lime);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* ---- misc ---------------------------------------------------------------- */
+
+.hb-sparkle {
+  position: absolute;
+  pointer-events: none;
+}
+
+.hb-footlink {
+  color: var(--hb-muted);
+  transition: color 0.15s ease;
+}
+.hb-footlink:hover {
+  color: var(--hb-mint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb *,
+  .hb *::before,
+  .hb *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

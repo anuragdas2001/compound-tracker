@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -119,6 +121,25 @@ export default function OnboardingPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-2xl px-6">
+        {/* Brand header */}
+        <div className="mb-8 flex justify-center">
+          <Link href="/" className="inline-flex items-center gap-3 group">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 p-1 transition-transform duration-300 group-hover:scale-105">
+              <Image
+                src="/brand_logo.png"
+                alt="Compound Logo"
+                width={36}
+                height={36}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+            <span className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
+              Compound
+            </span>
+          </Link>
+        </div>
+
         <AnimatePresence mode="wait">
           {!isFinishing && currentQuestion ? (
             <motion.div

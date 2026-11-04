@@ -1,3 +1,22 @@
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+
+const envCandidates = [
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), 'apps/api/.env'),
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '..', '.env'),
+  path.join(__dirname, '..', '..', '.env'),
+  path.join(__dirname, '..', '..', 'packages/db/.env'),
+];
+
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { Express } from 'express';

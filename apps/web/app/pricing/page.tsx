@@ -194,14 +194,17 @@ export default function PricingPage() {
                     )}
                   </div>
 
-                  <button className={`w-full py-4 rounded-[16px] font-bold text-[15px] transition-all duration-300 flex items-center justify-center gap-2 group ${
-                    isPro 
-                      ? 'bg-[var(--c-primary)] text-[var(--c-bg)] shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] hover:-translate-y-0.5' 
-                      : 'bg-[var(--c-surface)] text-[var(--c-text)] border border-[var(--c-border)] hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-surface-soft)]'
-                  }`}>
+                  <Link 
+                    href="/signup"
+                    className={`w-full py-4 rounded-[16px] font-bold text-[15px] transition-all duration-300 flex items-center justify-center gap-2 group ${
+                      isPro 
+                        ? 'bg-[var(--c-primary)] text-[var(--c-bg)] shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] hover:-translate-y-0.5' 
+                        : 'bg-[var(--c-surface)] text-[var(--c-text)] border border-[var(--c-border)] hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-surface-soft)]'
+                    }`}
+                  >
                     {tier.buttonText}
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  </Link>
                 </div>
 
                 <div className="p-8 pt-8 mt-4 border-t border-[var(--c-border)]/40 flex-1 flex flex-col justify-end">
