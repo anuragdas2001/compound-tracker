@@ -13,11 +13,11 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Compound — Daily Habit & Goal Tracker',
+  title: 'Habitly — Daily Habit & Goal Tracker',
   description: 'Track habits, build momentum, and compound your daily success.',
   icons: {
-    icon: '/brand_logo.png',
-    apple: '/brand_logo.png',
+    icon: '/habitly-mark.png',
+    apple: '/habitly-mark.png',
   },
 };
 

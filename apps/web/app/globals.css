@@ -7,37 +7,88 @@
 @source "../../../packages/ui/components/**/*.{tsx,ts}";
 
 :root {
-  --c-bg: #FFFFFF;
-  --c-surface: #FFFFFF;
-  --c-surface-soft: #F4FAF6;
-  --c-border: #E2EFE7;
-  --c-border-hover: #86EFAC;
-  --c-primary: #22C55E;
-  --c-light: #4ADE80;
-  --c-pale: #86EFAC;
-  --c-deep: #166534;
-  --c-deeper: #14532D;
-  --c-text: #052E16;
-  --c-muted: #166534;
-  --c-grid: rgba(34, 197, 94, 0.05);
-  --c-glow: rgba(34, 197, 94, 0.12);
+  /* Light Theme — crisp canvas with signature Habitly lemon-green accents */
+  --c-bg: #f8fafc;
+  --c-surface: #ffffff;
+  --c-surface-soft: #f1f5f9;
+  --c-border: #e2e8f0;
+  --c-border-strong: #cbd5e1;
+  --c-border-hover: #a8fe43;
+
+  /* Habitly lemon-green color accents */
+  --c-primary: #a8fe43;
+  --c-primary-hover: #9bf336;
+  --c-primary-dark: #07140c;
+  --c-on-primary: #07140c;
+  --c-lime: #a8fe43;
+  --c-emerald: #3ae484;
+  --c-teal: #10a271;
+  --c-light: #3ae484;
+  --c-pale: #b4ff3a;
+  --c-deep: rgba(168, 254, 67, 0.16);
+  --c-deeper: rgba(168, 254, 67, 0.28);
+
+  /* Typography */
+  --c-text: #0f172a;
+  --c-muted: #64748b;
+  --c-faint: #94a3b8;
+
+  /* Visual accents — signature Habitly flame ramp */
+  --c-flame: linear-gradient(135deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+  --c-flame-h: linear-gradient(90deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+  --c-streak-gradient: linear-gradient(135deg, #a8fe43 0%, #3ae484 58%, #10a271 100%);
+  --c-grid: rgba(15, 23, 42, 0.04);
+  --c-glow: radial-gradient(circle at center, rgba(168, 254, 67, 0.2) 0%, rgba(58, 228, 132, 0.08) 38%, transparent 68%);
+
+  /* Heat ramp */
+  --c-heat-0: #e2e8f0;
+  --c-heat-1: #17402e;
+  --c-heat-2: #1c7a50;
+  --c-heat-3: #34d27f;
+  --c-heat-4: #a8fe43;
 }
 
-:root.dark {
-  --c-bg: #070F0B;
-  --c-surface: #0E1B14;
-  --c-surface-soft: #13241A;
-  --c-border: #1F3328;
-  --c-border-hover: #2C4736;
-  --c-primary: #22C55E;
-  --c-light: #4ADE80;
-  --c-pale: #86EFAC;
-  --c-deep: #14532D;
-  --c-deeper: #052E16;
-  --c-text: #F4FAF6;
-  --c-muted: #7E9486;
-  --c-grid: rgba(34, 197, 94, 0.12);
-  --c-glow: rgba(34, 197, 94, 0.25);
+:root.dark,
+.dark {
+  /* Dark Theme — exact Habitly landing page tokens */
+  --c-bg: #0c0d11;
+  --c-surface: #13151b;
+  --c-surface-soft: #181b22;
+  --c-border: rgba(232, 255, 241, 0.08);
+  --c-border-strong: rgba(232, 255, 241, 0.16);
+  --c-border-hover: rgba(168, 254, 67, 0.38);
+
+  /* Habitly green color accents */
+  --c-primary: #a8fe43;
+  --c-primary-hover: #b9ff5c;
+  --c-primary-dark: #07140c;
+  --c-on-primary: #07140c;
+  --c-lime: #a8fe43;
+  --c-emerald: #3ae484;
+  --c-teal: #10a271;
+  --c-light: #3ae484;
+  --c-pale: #b4ff3a;
+  --c-deep: #17402e;
+  --c-deeper: #0e261b;
+
+  /* Typography */
+  --c-text: #e8fff1;
+  --c-muted: rgba(232, 255, 241, 0.64);
+  --c-faint: rgba(232, 255, 241, 0.38);
+
+  /* Visual accents */
+  --c-flame: linear-gradient(135deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+  --c-flame-h: linear-gradient(90deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+  --c-streak-gradient: linear-gradient(135deg, #b4ff3a 0%, #3ae484 58%, #14b87e 100%);
+  --c-grid: rgba(232, 255, 241, 0.055);
+  --c-glow: radial-gradient(circle at center, rgba(58, 228, 132, 0.16) 0%, rgba(168, 254, 67, 0.05) 38%, transparent 68%);
+
+  /* Heat ramp */
+  --c-heat-0: rgba(232, 255, 241, 0.06);
+  --c-heat-1: #17402e;
+  --c-heat-2: #1c7a50;
+  --c-heat-3: #34d27f;
+  --c-heat-4: #a8fe43;
 }
 
 @keyframes slideInRight {

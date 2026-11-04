@@ -474,18 +474,25 @@ export default function AuthLayout({
           animate="show"
         >
           <motion.div variants={item}>
-            <Link href="/" className="group mb-9 inline-flex items-center gap-3">
+            <Link href="/" className="group mb-9 inline-flex items-center gap-3" aria-label="Habitly home">
               <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/25 to-primary/5 p-1.5 shadow-[0_0_24px_rgba(34,197,94,0.25)] transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_38px_rgba(34,197,94,0.5)]">
                 <Image
-                  src="/brand_logo.png"
-                  alt="Compound Logo"
+                  src="/habitly-mark.png"
+                  alt="Habitly Mark"
                   width={44}
                   height={44}
                   className="h-full w-full object-contain"
                   priority
                 />
               </div>
-              <span className="text-3xl font-extrabold tracking-tighter text-white">Compound</span>
+              <Image
+                src="/habitly-wordmark.png"
+                alt="Habitly"
+                width={130}
+                height={29}
+                className="h-7 w-auto object-contain transition-opacity duration-300 group-hover:opacity-90"
+                priority
+              />
             </Link>
           </motion.div>
 
@@ -523,17 +530,23 @@ export default function AuthLayout({
           >
             {/* mobile brand */}
             <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
-              <Link href="/" className="flex items-center gap-2.5">
+              <Link href="/" className="flex items-center gap-2.5" aria-label="Habitly home">
                 <div className="relative flex h-8 w-8 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 p-1">
                   <Image
-                    src="/brand_logo.png"
-                    alt="Compound Logo"
+                    src="/habitly-mark.png"
+                    alt="Habitly Mark"
                     width={28}
                     height={28}
                     className="h-full w-full object-contain"
                   />
                 </div>
-                <span className="text-2xl font-extrabold tracking-tighter text-white">Compound</span>
+                <Image
+                  src="/habitly-wordmark.png"
+                  alt="Habitly"
+                  width={110}
+                  height={24}
+                  className="h-6 w-auto object-contain"
+                />
               </Link>
               <span className="flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
                 <Flame className="h-3 w-3" />

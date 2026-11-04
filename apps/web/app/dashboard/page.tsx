@@ -6,6 +6,7 @@ import {
   Ban,
   BookOpen,
   CalendarDays,
+  Check,
   CheckCircle2,
   Droplet,
   Flame,
@@ -86,7 +87,7 @@ export default function DashboardPage() {
     { title: 'Active Habits', value: activeCount, icon: Target, accent: 'var(--c-pale)' },
     { title: 'Completed Today', value: `${completedCount} / ${activeCount}`, icon: CheckCircle2, accent: 'var(--c-light)' },
     { title: 'Max Streak', value: `${maxStreak} Days`, icon: Flame, accent: 'var(--c-primary)' },
-    { title: 'Success Rate', value: successRate, icon: TrendingUp, accent: '#16A34A' },
+    { title: 'Success Rate', value: successRate, icon: TrendingUp, accent: 'var(--c-teal)' },
   ];
 
   const allLogs = realHabits.flatMap(h => h.logs?.map(l => ({ ...l, habitTitle: h.title })) || []);
@@ -107,7 +108,7 @@ export default function DashboardPage() {
     createHabit({
       title: suggested.title,
       description: suggested.description,
-      color: '#22c55e',
+      color: '#a8fe43',
       userId
     });
   };
@@ -151,20 +152,27 @@ export default function DashboardPage() {
            {/* Goal */}
             <div className="w-full shrink-0 sm:w-auto sm:-mt-2">
               <h2 className="mb-4 flex items-center gap-2 text-lg text-[var(--c-text)]" style={fontDisplay}>
-                <Award size={20} className="text-[var(--c-primary)]" />
+                <Award size={20} className="text-[#a8fe43]" />
                 Current Goal
               </h2>
 
-              <div className="flex flex-row items-center gap-6 rounded-2xl bg-[var(--c-surface-soft)] p-4 pr-8 border border-[var(--c-border)] shadow-sm">
+              <div className="flex flex-row items-center gap-6 rounded-2xl bg-white dark:bg-[var(--c-surface-soft)] p-4 pr-8 border border-[var(--c-border)] shadow-sm">
                 <div className="relative h-20 w-20 flex-none">
                   <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90 filter drop-shadow-sm">
+                    <defs>
+                      <linearGradient id="goalFlame" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#a8fe43" />
+                        <stop offset="60%" stopColor="#3ae484" />
+                        <stop offset="100%" stopColor="#10a271" />
+                      </linearGradient>
+                    </defs>
                     <circle cx="70" cy="70" r={RING_RADIUS} fill="none" stroke='var(--c-border)' strokeWidth="10" />
                     <circle
                       cx="70"
                       cy="70"
                       r={RING_RADIUS}
                       fill="none"
-                      stroke='var(--c-primary)'
+                      stroke='url(#goalFlame)'
                       strokeWidth="10"
                       strokeLinecap="round"
                       strokeDasharray={RING_CIRCUMFERENCE}
@@ -188,23 +196,34 @@ export default function DashboardPage() {
         </header>
                 
         {activeCount > 0 || isLoading ? (
-          <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--c-muted)]" style={fontMono}>
+          <section className="relative overflow-hidden rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8 shadow-sm transition-colors">
+            {/* Subtle top ambient glow from Habitly */}
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-36 opacity-20 dark:opacity-20"
+              style={{
+                background:
+                  'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(168, 254, 67, 0.35), transparent 70%)',
+              }}
+            />
+
+            <div className="relative z-10 flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[var(--c-muted)]" style={fontMono}>
                 Max Streak
               </p>
               {maxStreak > 0 && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--c-border)] bg-[var(--c-surface-soft)] px-4 py-1.5 text-xs font-medium text-[var(--c-text)]">
-                  <Flame size={14} className="text-[var(--c-primary)]" />
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#a8fe43] bg-[#a8fe43] px-4 py-1.5 text-xs font-bold text-[#07140c] shadow-xs dark:border-[#a8fe43]/30 dark:bg-[#a8fe43]/15 dark:text-[#a8fe43]">
+                  <Flame size={14} className="text-[#07140c] fill-[#07140c]/20 dark:text-[#a8fe43] dark:fill-[#a8fe43]/40" />
                   On Fire
                 </span>
               )}
             </div>
 
-            <div className="mt-4 flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-6xl font-semibold leading-none text-[var(--c-text)]" style={fontDisplay}>
-                {maxStreak}
-                <span className="ml-2 text-2xl font-normal text-[var(--c-primary)]">days</span>
+            <div className="relative z-10 mt-4 flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-6xl font-semibold leading-none" style={fontDisplay}>
+                <span className="bg-gradient-to-r from-[#8ce41a] via-[#2ec975] to-[#10a271] dark:from-[#b4ff3a] dark:via-[#3ae484] dark:to-[#14b87e] bg-clip-text text-transparent">
+                  {maxStreak}
+                </span>
+                <span className="ml-2 text-2xl font-normal text-[#07140c] dark:text-[#a8fe43]">days</span>
               </p>
 
               <div className="flex flex-1 items-center justify-end gap-2 overflow-x-auto pb-1">
@@ -212,18 +231,20 @@ export default function DashboardPage() {
                   <div
                     key={habit.id}
                     title={habit.title}
-                    className={`h-10 w-10 flex-none rounded-lg border transition-colors ${
+                    className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl border transition-all duration-200 ${
                       habit.completed
-                        ? 'border-[var(--c-primary)] bg-[var(--c-primary)]'
-                        : 'border-[var(--c-border)] bg-[var(--c-surface-soft)]'
+                        ? 'border-[#a8fe43] bg-[#a8fe43] text-[#07140c] shadow-[0_0_14px_rgba(168,254,67,0.4)]'
+                        : 'border-slate-200 dark:border-[var(--c-border)] bg-slate-100/90 dark:bg-[var(--c-surface-soft)] text-transparent hover:border-[#a8fe43]'
                     }`}
-                  />
+                  >
+                    <Check size={18} strokeWidth={2.8} className={habit.completed ? 'opacity-100' : 'opacity-0'} />
+                  </div>
                 ))}
               </div>
             </div>
 
-            <p className="mt-6 text-sm text-[var(--c-muted)]">
-              <span className="text-[var(--c-text)]" style={fontMono}>
+            <p className="relative z-10 mt-6 text-sm text-[var(--c-muted)]">
+              <span className="font-semibold text-[var(--c-text)]" style={fontMono}>
                 {completedCount}/{activeCount}
               </span>{' '}
               links forged today.
@@ -239,7 +260,7 @@ export default function DashboardPage() {
           if (availableSuggestions.length === 0 || isLoading) return null;
 
           return (
-            <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8">
+            <section className="rounded-[28px] border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-8 shadow-sm transition-colors">
               <h2 className="mb-6 text-xl text-[var(--c-text)]" style={fontDisplay}>
                 Suggested Habits
               </h2>
@@ -247,19 +268,21 @@ export default function DashboardPage() {
                 {availableSuggestions.map((suggested) => (
                   <div
                     key={suggested.title}
-                    className="flex flex-col justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-surface-soft)] p-5"
+                    className="flex flex-col justify-between rounded-2xl border border-[var(--c-border)] bg-slate-50/70 dark:bg-[var(--c-surface-soft)] p-5 transition-all hover:border-[#a8fe43] hover:shadow-sm"
                   >
                     <div>
-                      <suggested.icon className="mb-3 text-[var(--c-primary)]" size={24} />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#a8fe43] text-[#07140c] dark:bg-[#a8fe43]/15 dark:text-[#a8fe43] mb-3 shadow-xs">
+                        <suggested.icon size={20} />
+                      </div>
                       <h3 className="font-semibold text-[var(--c-text)]">{suggested.title}</h3>
                       <p className="mt-1 text-sm text-[var(--c-muted)]">{suggested.description}</p>
                     </div>
                     <button
                       onClick={() => handleAddSuggested(suggested)}
                       disabled={isCreating}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--c-primary)]/10 py-2 text-sm font-medium text-[var(--c-primary)] transition-colors hover:bg-[var(--c-primary)]/20"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#a8fe43] hover:bg-[#9bf336] active:scale-[0.98] text-[#07140c] border border-[#a8fe43] py-2.5 text-sm font-bold transition-all duration-200 shadow-xs"
                     >
-                      <Plus size={16} /> Add Habit
+                      <Plus size={16} strokeWidth={2.5} /> Add Habit
                     </button>
                   </div>
                 ))}
@@ -273,16 +296,21 @@ export default function DashboardPage() {
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <div key={stat.title} className="overflow-hidden rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)]">
-                <div className="h-1 w-full" style={{ background: stat.accent }} />
+              <div
+                key={stat.title}
+                className="overflow-hidden rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] shadow-xs transition-all hover:shadow-sm hover:border-[#a8fe43]"
+              >
+                <div className="h-1.5 w-full" style={{ background: stat.accent }} />
                 <div className="flex items-start justify-between p-5">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-[var(--c-muted)]">{stat.title}</p>
-                    <p className="mt-2 text-3xl text-[var(--c-text)]" style={fontMono}>
+                    <p className="text-xs uppercase tracking-wide font-semibold text-[var(--c-muted)]">{stat.title}</p>
+                    <p className="mt-2 text-3xl font-bold text-[var(--c-text)]" style={fontMono}>
                       {stat.value}
                     </p>
                   </div>
-                  <Icon size={18} className="mt-1 text-[var(--c-muted)]" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#a8fe43] text-[#07140c] dark:bg-[#a8fe43]/15 dark:text-[#a8fe43] shadow-xs">
+                    <Icon size={16} />
+                  </div>
                 </div>
               </div>
             );
@@ -294,7 +322,7 @@ export default function DashboardPage() {
           {/* Left */}
           <div className="space-y-6 lg:col-span-2">
             {/* Today's Habits */}
-            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6">
+            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 shadow-sm transition-colors">
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl text-[var(--c-text)]" style={fontDisplay}>
                   Today&rsquo;s Habits
@@ -312,38 +340,40 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={habit.id}
-                      className="rounded-xl border border-[var(--c-border)] bg-[var(--c-surface-soft)] p-4 transition-colors hover:border-[var(--c-border-hover)]"
+                      className="rounded-xl border border-[var(--c-border)] bg-slate-50/70 dark:bg-[var(--c-surface-soft)] p-4 transition-all hover:border-[#a8fe43] hover:shadow-xs"
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[var(--c-surface)] text-[var(--c-primary)]">
-                            <Icon size={16} />
+                          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-[#a8fe43]/60 dark:border-[var(--c-border)] bg-[#a8fe43] text-[#07140c] dark:bg-[var(--c-surface)] dark:text-[#a8fe43] shadow-xs">
+                            <Icon size={17} />
                           </div>
                           <div>
-                            <h3 className="font-medium text-[var(--c-text)]">{habit.title}</h3>
-                            <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--c-muted)]">
-                              <Flame size={12} className="text-[var(--c-primary)]" />
+                            <h3 className="font-semibold text-[var(--c-text)]">{habit.title}</h3>
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--c-muted)]">
+                              <Flame size={13} className="text-[#a8fe43] fill-[#a8fe43] dark:text-[#a8fe43]" />
                               {habit.streak} day streak
                             </p>
                           </div>
                         </div>
 
                         <span
-                          className={`flex-none whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
-                            habit.completed ? 'bg-[var(--c-deep)]/60 text-[var(--c-light)]' : 'bg-white/5 text-[var(--c-muted)]'
+                          className={`flex-none whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold border transition-colors ${
+                            habit.completed
+                              ? 'border-[#a8fe43] bg-[#a8fe43] text-[#07140c] shadow-xs dark:border-[#a8fe43]/40 dark:bg-[#a8fe43]/15 dark:text-[#a8fe43]'
+                              : 'border-slate-200 bg-white text-slate-500 dark:border-[var(--c-border)] dark:bg-[var(--c-surface)] dark:text-[var(--c-muted)]'
                           }`}
                         >
                           {habit.completed ? 'Done' : 'Pending'}
                         </span>
                       </div>
 
-                      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--c-border)]">
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-[var(--c-border)]">
                         <div
-                          className="h-full rounded-full transition-all"
+                          className="h-full rounded-full transition-all duration-300"
                           style={{
                             width: `${habit.progress}%`,
                             background: habit.completed
-                              ? 'linear-gradient(90deg, #16A34A, #4ADE80)'
+                              ? 'var(--c-flame)'
                               : 'var(--c-primary)',
                           }}
                         />
@@ -355,9 +385,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Activity */}
-            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6">
+            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 shadow-sm transition-colors">
               <h2 className="mb-6 flex items-center gap-2 text-xl text-[var(--c-text)]" style={fontDisplay}>
-                <Activity size={18} className="text-[var(--c-primary)]" />
+                <Activity size={18} className="text-[#a8fe43]" />
                 Recent Activity
               </h2>
 
@@ -367,15 +397,15 @@ export default function DashboardPage() {
                 ) : activity.map((item, i) => (
                   <div key={i} className="relative flex gap-4 pl-1">
                     {i !== activity.length - 1 && (
-                      <span className="absolute left-[5px] top-4 h-[calc(100%+0.75rem)] w-px bg-[var(--c-border)]" />
+                      <span className="absolute left-[5px] top-4 h-[calc(100%+0.75rem)] w-px bg-slate-200 dark:bg-[var(--c-border)]" />
                     )}
                     <span
-                      className="relative z-10 mt-1.5 h-3 w-3 flex-none rounded-full"
-                      style={{ background: item.color }}
+                      className="relative z-10 mt-1.5 h-3 w-3 flex-none rounded-full shadow-[0_0_8px_rgba(168,254,67,0.7)]"
+                      style={{ background: '#a8fe43' }}
                     />
                     <div className="flex flex-1 flex-wrap items-center justify-between gap-x-3">
-                      <p className="text-sm text-[#D8E3DC]">{item.text}</p>
-                      <p className="text-xs text-[var(--c-muted)]" style={fontMono}>
+                      <p className="text-sm font-medium text-slate-800 dark:text-[var(--c-text)]">{item.text}</p>
+                      <p className="text-xs text-slate-400 dark:text-[var(--c-muted)]" style={fontMono}>
                         {item.time}
                       </p>
                     </div>
@@ -388,9 +418,9 @@ export default function DashboardPage() {
           {/* Right */}
           <div className="space-y-6">
             {/* Weekly Progress */}
-            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6">
+            <div className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 shadow-sm transition-colors">
               <h2 className="mb-6 flex items-center gap-2 text-lg text-[var(--c-text)]" style={fontDisplay}>
-                <CalendarDays size={18} className="text-[var(--c-primary)]" />
+                <CalendarDays size={18} className="text-[#a8fe43]" />
                 Weekly Progress
               </h2>
 
@@ -404,12 +434,18 @@ export default function DashboardPage() {
                         style={{
                           height: `${value}%`,
                           background: isToday
-                            ? 'linear-gradient(180deg, #22C55E, #86EFAC)'
-                            : 'var(--c-border)',
+                            ? 'var(--c-flame)'
+                            : 'var(--c-surface-soft)',
+                          border: isToday
+                            ? '1.5px solid #a8fe43'
+                            : '1px solid var(--c-border)',
+                          boxShadow: isToday
+                            ? '0 0 16px -2px rgba(168, 254, 67, 0.6)'
+                            : 'none',
                         }}
                       />
                       <span
-                        className={`text-[10px] ${isToday ? 'text-[var(--c-primary)]' : 'text-[var(--c-muted)]'}`}
+                        className={`text-[10px] font-bold ${isToday ? 'text-[#07140c] bg-[#a8fe43] dark:text-[#a8fe43] dark:bg-transparent px-1.5 py-0.5 rounded-full' : 'text-slate-400 dark:text-[var(--c-muted)]'}`}
                         style={fontMono}
                       >
                         {DAYS[index]}
@@ -420,17 +456,20 @@ export default function DashboardPage() {
               </div>
             </div>
 
-           
-
-            {/* Motivation */}
+            {/* Motivation Card */}
             <div
-              className="overflow-hidden rounded-2xl border border-[var(--c-border)] p-6"
-              style={{ background: 'linear-gradient(135deg, #16A34A 0%, #052E16 100%)' }}
+              className="relative overflow-hidden rounded-2xl border border-[#a8fe43]/40 dark:border-[var(--c-border-strong)] p-6 shadow-sm transition-colors"
+              style={{
+                background:
+                  'radial-gradient(ellipse 70% 90% at 100% 100%, rgba(168, 254, 67, 0.22), transparent 70%), radial-gradient(ellipse 50% 60% at 85% 20%, rgba(58, 228, 132, 0.12), transparent 70%), var(--c-surface)',
+              }}
             >
-              <Sparkles className="mb-4 text-[var(--c-pale)]" />
-              <p className="text-xl italic leading-snug text-[var(--c-text)]" style={fontDisplay}>
-                &ldquo;Small habits, repeated daily, become extraordinary results.&rdquo;
-              </p>
+              <div className="relative z-10">
+                <Sparkles className="mb-4 text-[#a8fe43]" />
+                <p className="text-xl italic leading-snug text-slate-800 dark:text-[var(--c-text)]" style={fontDisplay}>
+                  &ldquo;Small habits, repeated daily, become extraordinary results.&rdquo;
+                </p>
+              </div>
             </div>
           </div>
         </div>

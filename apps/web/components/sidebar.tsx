@@ -89,7 +89,7 @@ export function AppSidebar({
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col border-r border-[var(--c-border)] bg-white/95 dark:bg-[#070F0B]/95 backdrop-blur-3xl transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col border-r border-[var(--c-border)] bg-white/95 dark:bg-[#0c0d11]/95 backdrop-blur-3xl transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-20' : 'w-64'
         } ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -110,11 +110,11 @@ export function AppSidebar({
             isCollapsed ? 'justify-center' : ''
           }`}
         >
-          <Link href="/" className="flex items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 transition-all hover:bg-[var(--c-surface-soft)]/50 group">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] bg-[var(--c-primary)]/10 border border-[var(--c-primary)]/30 p-1 shadow-[0_0_15px_rgba(34,197,94,0.15)] group-hover:scale-105 transition-transform duration-300">
+          <Link href="/" className="flex items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 transition-all hover:bg-[var(--c-surface-soft)]/50 group" aria-label="Habitly home">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] bg-[#a8fe43]/20 border border-[#a8fe43]/50 dark:bg-[#a8fe43]/10 dark:border-[#a8fe43]/30 p-1.5 shadow-xs dark:shadow-[0_0_15px_rgba(168,254,67,0.18)] group-hover:scale-105 transition-transform duration-300">
               <Image
-                src="/brand_logo.png"
-                alt="Compound Logo"
+                src="/habitly-mark.png"
+                alt="Habitly Mark"
                 width={36}
                 height={36}
                 className="h-full w-full object-contain"
@@ -122,15 +122,22 @@ export function AppSidebar({
               />
             </div>
             {!isCollapsed && (
-              <span className="text-2xl font-bold tracking-tight text-[var(--c-text)] drop-shadow-sm" style={fontDisplay}>
-                Compound
-              </span>
+              <div className="relative flex items-center">
+                <Image
+                  src="/habitly-wordmark.png"
+                  alt="Habitly"
+                  width={120}
+                  height={28}
+                  className="h-6 w-auto object-contain brightness-[0.12] dark:brightness-100 transition-all duration-200 group-hover:opacity-90"
+                  priority
+                />
+              </div>
             )}
           </Link>
         </div>
 
         {/* NAVIGATION LINKS */}
-        <nav className="flex-1 space-y-1.5 px-3 py-6 overflow-y-auto mt-2">
+        <nav className="flex-1 space-y-1.5 px-3 py-3 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname?.startsWith(item.href);
@@ -139,27 +146,27 @@ export function AppSidebar({
               <Link
                 key={item.id}
                 href={item.href}
-                className={`group relative flex items-center font-semibold transition-all duration-300 rounded-[14px] ${
+                className={`group relative flex items-center font-semibold transition-all duration-300  ${
                   isCollapsed
                     ? 'justify-center h-12 w-12 mx-auto'
                     : 'gap-3.5 px-4 py-3.5 text-[15px]'
                 } ${
                   isActive
-                    ? 'bg-[var(--c-primary)]/10 border border-[var(--c-primary)]/20 text-[var(--c-primary)] shadow-[0_4px_20px_rgba(34,197,94,0.05)]'
-                    : 'border border-transparent text-[var(--c-muted)] hover:bg-[var(--c-surface-soft)]/80 hover:text-[var(--c-text)] hover:border-[var(--c-border)]/50'
+                    ? 'bg-[#a8fe43] text-[#07140c] font-bold shadow-xs dark:bg-[#a8fe43]/15 dark:border-[#a8fe43]/30 dark:text-[#a8fe43] dark:shadow-[0_4px_20px_rgba(168,254,67,0.06)]'
+                    : 'border border-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-[var(--c-muted)] dark:hover:bg-[var(--c-surface-soft)]/80 dark:hover:text-[var(--c-text)] dark:hover:border-[var(--c-border)]/50'
                 }`}
                 title={isCollapsed ? item.label : undefined}
               >
-                {isActive && !isCollapsed && (
-                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[var(--c-primary)] rounded-r-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                {isActive && (
+                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-full bg-[#07140c] dark:bg-[#a8fe43] shadow-[0_0_8px_rgba(168,254,67,0.6)]" />
                 )}
                 
                 <Icon
                   size={20}
                   className={`flex-none transition-all duration-300 ${
                     isActive
-                      ? 'text-[var(--c-primary)] drop-shadow-[0_0_8px_rgba(34,197,94,0.4)] scale-110'
-                      : 'text-[var(--c-muted)] group-hover:text-[var(--c-text)] group-hover:scale-110'
+                      ? 'text-[#07140c] dark:text-[#a8fe43] drop-shadow-xs dark:drop-shadow-[0_0_8px_rgba(168,254,67,0.4)] scale-110'
+                      : 'text-slate-500 group-hover:text-slate-900 dark:text-[var(--c-muted)] dark:group-hover:text-[var(--c-text)] group-hover:scale-110'
                   }`}
                 />
                 {!isCollapsed && <span className="truncate tracking-wide">{item.label}</span>}
@@ -170,23 +177,23 @@ export function AppSidebar({
 
         {/* SUBSCRIPTION PLAN CARD */}
         {!isCollapsed && (
-          <div className="mx-3 mb-1 rounded-[8px] bg-gradient-to-b from-[var(--c-primary)]/15 to-[var(--c-surface)] border border-[var(--c-primary)]/30 p-4 text-[var(--c-text)] relative overflow-hidden group shadow-[0_4px_20px_rgba(34,197,94,0.08)]">
-            <div className="absolute -top-3 -right-3 opacity-10 text-[var(--c-primary)] group-hover:scale-125 transition-transform duration-500">
-               <Zap size={72} className="fill-[var(--c-primary)]" />
+          <div className="mx-3 mb-1 rounded-2xl bg-gradient-to-b from-[#a8fe43]/20 to-white border border-[#a8fe43]/40 dark:from-[var(--c-primary)]/15 dark:to-[var(--c-surface)] dark:border-[var(--c-primary)]/30 p-4 text-[var(--c-text)] relative overflow-hidden group shadow-xs dark:shadow-[0_4px_20px_rgba(168,254,67,0.08)]">
+            <div className="absolute -top-3 -right-3 opacity-15 text-[#a8fe43] group-hover:scale-125 transition-transform duration-500">
+               <Zap size={72} className="fill-[#a8fe43]" />
             </div>
             
             <div className="flex justify-between items-start mb-3 relative z-10">
-              <div className="flex items-center gap-2 font-bold text-[13px] text-[var(--c-text)] tracking-wide">
-                 <Zap size={16} className="text-[var(--c-primary)] fill-[var(--c-primary)] drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+              <div className="flex items-center gap-2 font-bold text-[13px] text-slate-800 dark:text-[var(--c-text)] tracking-wide">
+                 <Zap size={16} className="text-[#07140c] fill-[#a8fe43] dark:text-[#a8fe43] dark:fill-[#a8fe43] drop-shadow-xs dark:drop-shadow-[0_0_8px_rgba(168,254,67,0.6)]" />
                  Manage Plan
               </div>
-              <span className="bg-[var(--c-surface)] border border-[var(--c-border)] text-[10px] font-bold px-2.5 py-1 rounded-full text-[var(--c-text)] shadow-sm uppercase">
+              <span className="bg-[#a8fe43] border border-[#a8fe43] text-[#07140c] font-bold px-2.5 py-1 rounded-full shadow-xs uppercase text-[10px]">
                 {(session?.user as any)?.plan || 'STARTER'}
               </span>
             </div>
             
-            <p className="text-[11px] text-[var(--c-muted)] leading-relaxed relative z-10">
-              You are currently on the <strong className="text-[var(--c-text)] font-semibold capitalize">{((session?.user as any)?.plan || 'STARTER').toLowerCase()}</strong> plan.
+            <p className="text-[11px] text-slate-500 dark:text-[var(--c-muted)] leading-relaxed relative z-10">
+              You are currently on the <strong className="text-slate-800 dark:text-[var(--c-text)] font-semibold capitalize">{((session?.user as any)?.plan || 'STARTER').toLowerCase()}</strong> plan.
             </p>
           </div>
         )}

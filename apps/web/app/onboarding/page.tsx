@@ -123,20 +123,25 @@ export default function OnboardingPage() {
       <div className="relative z-10 w-full max-w-2xl px-6">
         {/* Brand header */}
         <div className="mb-8 flex justify-center">
-          <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 p-1 transition-transform duration-300 group-hover:scale-105">
+          <Link href="/" className="inline-flex items-center gap-3 group" aria-label="Habitly home">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 p-1.5 transition-transform duration-300 group-hover:scale-105">
               <Image
-                src="/brand_logo.png"
-                alt="Compound Logo"
+                src="/habitly-mark.png"
+                alt="Habitly Mark"
                 width={36}
                 height={36}
                 className="h-full w-full object-contain"
                 priority
               />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
-              Compound
-            </span>
+            <Image
+              src="/habitly-wordmark.png"
+              alt="Habitly"
+              width={120}
+              height={27}
+              className="h-6.5 w-auto object-contain transition-opacity duration-300 group-hover:opacity-90"
+              priority
+            />
           </Link>
         </div>
 

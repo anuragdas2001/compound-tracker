@@ -82,15 +82,15 @@ export default function PlayerStatusBar() {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex h-16 w-full items-center justify-end gap-3 sm:gap-4 border-b border-[var(--c-border)] bg-white dark:bg-[#070F0B]/80 px-6 backdrop-blur-md transition-colors duration-300">
+      <div className="sticky top-0 z-30 flex h-16 w-full items-center justify-end gap-3 sm:gap-4 border-b border-[var(--c-border)] bg-white/95 dark:bg-[#0c0d11]/85 px-6 backdrop-blur-md transition-colors duration-300">
         {/* SPARKS BUTTON */}
         <Link href="/habits" title="View Rewards Store">
-          <div className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-emerald-400/50 bg-gradient-to-br from-emerald-50 to-emerald-100/80 px-3.5 sm:px-4 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-300 hover:scale-105 hover:border-emerald-400 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)] dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-emerald-500/5 dark:text-emerald-400 dark:hover:border-emerald-500/60 dark:hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+          <div className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-[#a8fe43] bg-[#a8fe43] px-3.5 sm:px-4 text-sm font-bold text-[#07140c] shadow-xs transition-all duration-300 hover:scale-105 hover:brightness-105 dark:border-[#a8fe43]/30 dark:from-[#a8fe43]/15 dark:to-[#3ae484]/5 dark:text-[#a8fe43] dark:hover:border-[#a8fe43]/60 dark:hover:shadow-[0_0_15px_rgba(168,254,67,0.25)]">
             <div className="absolute inset-0 overflow-hidden rounded-full">
               <div className="absolute top-0 left-0 h-full w-full -translate-x-[150%] skew-x-[-20deg] bg-white/40 transition-transform duration-700 ease-out group-hover:translate-x-[150%]" />
             </div>
             
-            <Zap className="relative z-10 h-4 w-4 fill-emerald-500 text-emerald-600 transition-transform duration-300 group-hover:scale-110 dark:text-emerald-400 dark:fill-emerald-400" />
+            <Zap className="relative z-10 h-4 w-4 fill-[#07140c] text-[#07140c] transition-transform duration-300 group-hover:scale-110 dark:text-[#a8fe43] dark:fill-[#a8fe43]" />
             <span className="relative z-10 font-mono tracking-wide">{sparks} Sparks</span>
           </div>
         </Link>
@@ -100,9 +100,9 @@ export default function PlayerStatusBar() {
           type="button"
           onClick={() => setShieldModalOpen(true)}
           title="Streak Shield Inventory"
-          className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 sm:px-4 text-sm font-bold text-blue-400 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-blue-500/20"
+          className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 sm:px-4 text-sm font-bold text-blue-500 dark:text-blue-400 shadow-xs transition-all duration-300 hover:scale-105 hover:bg-blue-500/20"
         >
-          <Shield className="h-4 w-4 fill-blue-500/20 text-blue-400 transition-transform duration-300 group-hover:scale-110" />
+          <Shield className="h-4 w-4 fill-blue-500/20 text-blue-500 dark:text-blue-400 transition-transform duration-300 group-hover:scale-110" />
           <span className="font-mono tracking-wide">{summary?.shields ?? 0}</span>
         </button>
 
@@ -111,16 +111,16 @@ export default function PlayerStatusBar() {
           type="button"
           onClick={() => setLevelModalOpen(true)}
           title="Player Level & Progression"
-          className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-[var(--c-border)] bg-[var(--c-surface-soft)] px-3 sm:px-4 text-sm font-bold text-[var(--c-text)] shadow-sm transition-all duration-300 hover:scale-105 hover:bg-[var(--c-surface)]"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 sm:px-4 text-sm font-bold text-slate-800 shadow-xs transition-all duration-300 hover:scale-105 hover:bg-slate-100 dark:border-[var(--c-border)] dark:bg-[var(--c-surface-soft)] dark:text-[var(--c-text)] dark:hover:bg-[var(--c-surface)]"
         >
-          <span className="text-xs font-black uppercase tracking-wider text-[var(--c-muted)]">LVL</span>
+          <span className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-[var(--c-muted)]">LVL</span>
           <span className="font-mono">{level}</span>
         </button>
 
         {/* THEME TOGGLE */}
         <button
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--c-muted)] transition-all hover:bg-[var(--c-primary)]/10 dark:hover:bg-white/[0.05] hover:text-[var(--c-text)]"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-[var(--c-muted)] dark:hover:bg-white/[0.05] dark:hover:text-[var(--c-text)]"
           aria-label="Toggle Theme"
         >
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -128,19 +128,19 @@ export default function PlayerStatusBar() {
 
         {/* NOTIFICATIONS */}
         <button
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-[var(--c-muted)] transition-all hover:bg-[var(--c-primary)]/10 dark:hover:bg-white/[0.05] hover:text-[var(--c-text)]"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-[var(--c-muted)] dark:hover:bg-white/[0.05] dark:hover:text-[var(--c-text)]"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
           {summary?.unreadNotifications ? (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#070F0B]"></span>
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#0c0d11]"></span>
           ) : null}
         </button>
 
         {/* AVATAR */}
         <Link
           href="/profile"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--c-border)] bg-[var(--c-surface-soft)] text-[var(--c-primary)] transition-all hover:border-[var(--c-primary)]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[#07140c] transition-all hover:border-[#a8fe43] hover:text-[#07140c] dark:border-[var(--c-border)] dark:bg-[var(--c-surface-soft)] dark:text-[#a8fe43] dark:hover:border-[var(--c-primary)]"
         >
           <User className="h-5 w-5" />
         </Link>
@@ -426,7 +426,8 @@ export default function PlayerStatusBar() {
                   <defs>
                     <linearGradient id="levelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#34D399" />
+                      <stop offset="50%" stopColor="#34D399" />
+                      <stop offset="100%" stopColor="#a8fe43" />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -437,7 +438,7 @@ export default function PlayerStatusBar() {
                   </span>
                   <span
                     className="text-[28px] font-black leading-none"
-                    style={{ color: "#34D399", textShadow: "0 0 20px rgba(52,211,153,0.3)" }}
+                    style={{ color: "#a8fe43", textShadow: "0 0 20px rgba(168,254,67,0.35)" }}
                   >
                     {level}
                   </span>
@@ -465,7 +466,7 @@ export default function PlayerStatusBar() {
                   </span>
                   <span
                     className="text-[13px] font-bold tabular-nums"
-                    style={{ color: "#34D399" }}
+                    style={{ color: "#a8fe43" }}
                   >
                     {levelProgress}%
                   </span>
@@ -480,8 +481,8 @@ export default function PlayerStatusBar() {
                     className="absolute inset-y-0 left-0 rounded-full"
                     style={{
                       width: `${levelProgress}%`,
-                      background: "linear-gradient(90deg, #059669 0%, #10B981 40%, #34D399 100%)",
-                      boxShadow: "0 0 12px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+                      background: "linear-gradient(90deg, #059669 0%, #10B981 35%, #34D399 70%, #a8fe43 100%)",
+                      boxShadow: "0 0 12px rgba(168,254,67,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
                       transition: "width 1s ease-out",
                     }}
                   />

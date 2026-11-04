@@ -99,23 +99,28 @@ function Sparkle({ className }: { className?: string }) {
 
 function Logo({ size = "md" }: { size?: "md" | "lg" }) {
   const markH = size === "lg" ? "h-11 w-11" : "h-9 w-9";
-  const textH = size === "lg" ? "text-2xl" : "text-xl";
+  const wordmarkH = size === "lg" ? "h-7" : "h-6";
 
   return (
-    <Link href="/" className="inline-flex items-center gap-3 group" aria-label="Compound home">
-      <div className={`relative ${markH} flex-none overflow-hidden rounded-xl transition-transform duration-300 group-hover:scale-105`}>
+    <Link href="/" className="inline-flex items-center gap-2.5 group" aria-label="Habitly home">
+      <div className={`relative ${markH} flex-none transition-transform duration-300 group-hover:scale-105`}>
         <Image
-          src="/brand_logo.png"
-          alt="Compound Logo"
-          width={120}
-          height={120}
+          src="/habitly-mark.png"
+          alt="Habitly Mark"
+          width={80}
+          height={80}
           className="h-full w-full object-contain"
           priority
         />
       </div>
-      <span className={`font-bold tracking-tight text-[color:var(--hb-text)] drop-shadow-sm ${textH}`}>
-        Compound
-      </span>
+      <Image
+        src="/habitly-wordmark.png"
+        alt="Habitly"
+        width={130}
+        height={29}
+        className={`${wordmarkH} w-auto object-contain transition-opacity duration-300 group-hover:opacity-90`}
+        priority
+      />
     </Link>
   );
 }
@@ -150,7 +155,7 @@ function TodayCard() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Image
-            src="/brand_logo.png"
+            src="/habitly-mark.png"
             alt="Streak flame"
             width={120}
             height={120}
@@ -396,7 +401,7 @@ export default function Page() {
                       >
                         {isToday ? (
                           <Image
-                            src="/brand_logo.png"
+                            src="/habitly-mark.png"
                             alt="Today"
                             width={80}
                             height={80}
@@ -427,15 +432,15 @@ export default function Page() {
               <div className="mt-8 space-y-3">
                 <div className="hb-note">
                   <Image
-                    src="/brand_logo.png"
-                    alt="Compound"
+                    src="/habitly-mark.png"
+                    alt="Habitly"
                     width={80}
                     height={80}
                     className="mt-0.5 h-8 w-8 object-contain flex-none rounded-lg"
                   />
                   <div className="min-w-0">
                     <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="font-semibold">Compound</span>
+                      <span className="font-semibold">Habitly</span>
                       <span className="text-[color:var(--hb-faint)]">7:30 pm</span>
                     </div>
                     <p className="mt-0.5 text-[15px] leading-6 text-[color:var(--hb-muted)]">
@@ -446,15 +451,15 @@ export default function Page() {
 
                 <div className="hb-note ml-4 sm:ml-8">
                   <Image
-                    src="/brand_logo.png"
-                    alt="Compound"
+                    src="/habitly-mark.png"
+                    alt="Habitly"
                     width={80}
                     height={80}
                     className="mt-0.5 h-8 w-8 object-contain flex-none rounded-lg"
                   />
                   <div className="min-w-0">
                     <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="font-semibold">Compound</span>
+                      <span className="font-semibold">Habitly</span>
                       <span className="text-[color:var(--hb-faint)]">10:15 pm</span>
                     </div>
                     <p className="mt-0.5 text-[15px] leading-6 text-[color:var(--hb-muted)]">
@@ -582,7 +587,7 @@ export default function Page() {
             <Sparkle className="hb-sparkle right-[38%] top-10 hidden h-5 w-5 text-[color:var(--hb-lime)] opacity-70 md:block" />
 
             <Image
-              src="/brand_logo.png"
+              src="/habitly-mark.png"
               alt=""
               width={400}
               height={400}
@@ -630,7 +635,7 @@ export default function Page() {
           </div>
 
           <p className="text-sm text-[color:var(--hb-faint)]">
-            © {new Date().getFullYear()} Compound. All rights reserved.
+            © {new Date().getFullYear()} Habitly. All rights reserved.
           </p>
         </div>
       </footer>
