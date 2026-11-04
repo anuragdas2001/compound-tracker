@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   User, 
@@ -31,6 +31,32 @@ const SETTINGS_TABS = [
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('preferences');
   const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    if (stored) {
+      setTheme(stored);
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else if (newTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    } else if (newTheme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.removeItem('theme');
+    }
+  };
   
   // Dummy toggle states
   const [toggles, setToggles] = useState({
@@ -163,7 +189,7 @@ export default function SettingsPage() {
                     return (
                       <button
                         key={t.id}
-                        onClick={() => setTheme(t.id)}
+                        onClick={() => handleThemeChange(t.id)}
                         className={`group relative flex flex-col justify-between h-40 p-6 rounded-[28px] border transition-all duration-500 overflow-hidden ${
                           isSelected 
                             ? 'border-[var(--c-primary)]/50 bg-[var(--c-surface)] shadow-[0_10px_30px_rgba(34,197,94,0.1)] -translate-y-1' 

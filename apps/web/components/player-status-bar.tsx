@@ -21,35 +21,33 @@ export default function PlayerStatusBar() {
   const [shieldModalOpen, setShieldModalOpen] = useState(false);
   const [levelModalOpen, setLevelModalOpen] = useState(false);
 
-  // Theme tracking
-  const [theme, setTheme] = useState("light");
+  // Theme tracking - default is dark
+  const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
-    if (storedTheme) {
-      setTheme(storedTheme);
+    if (storedTheme === "light") {
+      setTheme("light");
+      document.documentElement.classList.remove("dark");
     } else {
+      setTheme("dark");
       document.documentElement.classList.add("dark");
     }
   }, []);
 
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    if (summary?.sparksBalance !== undefined) {
-      setSparks(summary.sparksBalance);
-    }
-  }, [summary, setSparks]);
-
-  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      if (next === "dark") {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      }
+      return next;
+    });
+  };
 
   // Level & XP calculations
   const totalXp = summary?.totalXp || 0;
@@ -90,8 +88,8 @@ export default function PlayerStatusBar() {
               <div className="absolute top-0 left-0 h-full w-full -translate-x-[150%] skew-x-[-20deg] bg-white/40 transition-transform duration-700 ease-out group-hover:translate-x-[150%]" />
             </div>
             
-            <Zap className="relative z-10 h-4 w-4 fill-[#07140c] text-[#07140c] transition-transform duration-300 group-hover:scale-110 dark:text-[#a8fe43] dark:fill-[#a8fe43]" />
-            <span className="relative z-10 font-mono tracking-wide">{sparks} Sparks</span>
+            <Zap className="relative z-10 h-4 w-4 fill-[#07140c] text-[#07140c] transition-transform duration-300 group-hover:scale-110" />
+            <span className="relative z-10 font-mono tracking-wide text-[#07140c]">{sparks} Sparks</span>
           </div>
         </Link>
 
