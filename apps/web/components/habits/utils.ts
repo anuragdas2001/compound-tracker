@@ -43,13 +43,22 @@ export function getMonthWeekOffsets(weekOffset: number, count = 4) {
   return Array.from({ length: count }, (_, i) => start + i);
 }
 
-export function isDateCompleted(logs: HabitLog[] = [], targetDate: Date) {
+export function getLogicalDate(date: Date = new Date(), dayCutoffHour: number = 0): Date {
+  const adjusted = new Date(date);
+  if (dayCutoffHour > 0 && adjusted.getHours() < dayCutoffHour) {
+    adjusted.setDate(adjusted.getDate() - 1);
+  }
+  return adjusted;
+}
+
+export function isDateCompleted(logs: HabitLog[] = [], targetDate: Date, dayCutoffHour: number = 0) {
+  const targetLogical = getLogicalDate(targetDate, dayCutoffHour);
   return logs.some((log) => {
-    const logDate = new Date(log.completedAt);
+    const logDate = getLogicalDate(new Date(log.completedAt), dayCutoffHour);
     return (
-      logDate.getFullYear() === targetDate.getFullYear() &&
-      logDate.getMonth() === targetDate.getMonth() &&
-      logDate.getDate() === targetDate.getDate()
+      logDate.getFullYear() === targetLogical.getFullYear() &&
+      logDate.getMonth() === targetLogical.getMonth() &&
+      logDate.getDate() === targetLogical.getDate()
     );
   });
 }
@@ -57,17 +66,19 @@ export function isDateCompleted(logs: HabitLog[] = [], targetDate: Date) {
 export function isDateShielded(
   shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
   targetDate: Date,
-  habitId?: string
+  habitId?: string,
+  dayCutoffHour: number = 0
 ) {
+  const targetLogical = getLogicalDate(targetDate, dayCutoffHour);
   return shields.some((shield) => {
     if (shield.relatedHabitId && habitId && shield.relatedHabitId !== habitId) {
       return false;
     }
-    const sDate = new Date(shield.missedDate);
+    const sDate = getLogicalDate(new Date(shield.missedDate), dayCutoffHour);
     return (
-      sDate.getFullYear() === targetDate.getFullYear() &&
-      sDate.getMonth() === targetDate.getMonth() &&
-      sDate.getDate() === targetDate.getDate()
+      sDate.getFullYear() === targetLogical.getFullYear() &&
+      sDate.getMonth() === targetLogical.getMonth() &&
+      sDate.getDate() === targetLogical.getDate()
     );
   });
 }
@@ -76,17 +87,18 @@ export function isDateActive(
   logs: HabitLog[] = [],
   shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
   targetDate: Date,
-  habitId?: string
+  habitId?: string,
+  dayCutoffHour: number = 0
 ) {
-  return isDateCompleted(logs, targetDate) || isDateShielded(shields, targetDate, habitId);
+  return isDateCompleted(logs, targetDate, dayCutoffHour) || isDateShielded(shields, targetDate, habitId, dayCutoffHour);
 }
 
-export function getWeek(habit: { logs: HabitLog[] }, weekOffset: number) {
+export function getWeek(habit: { logs: HabitLog[] }, weekOffset: number, dayCutoffHour: number = 0) {
   const start = baseMonday(weekOffset);
   return Array.from({ length: 7 }, (_, i) => {
     const targetDate = new Date(start);
     targetDate.setDate(start.getDate() + i);
-    return isDateCompleted(habit.logs, targetDate);
+    return isDateCompleted(habit.logs, targetDate, dayCutoffHour);
   });
 }
 
@@ -109,13 +121,14 @@ export function getGreeting() {
 export function habitStreak(
   logs: HabitLog[] = [],
   shields: Array<{ missedDate: string; relatedHabitId?: string | null }> = [],
-  habitId?: string
+  habitId?: string,
+  dayCutoffHour: number = 0
 ) {
-  const d = new Date();
-  if (!isDateActive(logs, shields, d, habitId)) d.setDate(d.getDate() - 1);
+  const d = getLogicalDate(new Date(), dayCutoffHour);
+  if (!isDateActive(logs, shields, d, habitId, dayCutoffHour)) d.setDate(d.getDate() - 1);
 
   let n = 0;
-  while (isDateActive(logs, shields, d, habitId) && n < 366) {
+  while (isDateActive(logs, shields, d, habitId, dayCutoffHour) && n < 366) {
     n++;
     d.setDate(d.getDate() - 1);
   }

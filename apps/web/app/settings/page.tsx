@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 import { 
   Settings, 
   User, 
@@ -36,6 +37,40 @@ export default function SettingsPage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('preferences');
   const [theme, setTheme] = useState('dark');
+  const [dayCutoffHour, setDayCutoffHour] = useState<number>(3);
+  const [savingCutoff, setSavingCutoff] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/user/preferences')
+      .then(res => res.json())
+      .then(data => {
+        if (typeof data.dayCutoffHour === 'number') {
+          setDayCutoffHour(data.dayCutoffHour);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleCutoffChange = async (hour: number) => {
+    setDayCutoffHour(hour);
+    setSavingCutoff(true);
+    try {
+      const res = await fetch('/api/user/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayCutoffHour: hour }),
+      });
+      if (res.ok) {
+        toast.success('Day reset window updated!');
+      } else {
+        toast.error('Failed to update day reset window');
+      }
+    } catch {
+      toast.error('Network error updating day reset window');
+    } finally {
+      setSavingCutoff(false);
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('theme');
@@ -246,6 +281,35 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   
+                  {/* Day Reset Cutoff Window */}
+                  <div className="group flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-[24px] border border-[var(--c-border)]/50 bg-[var(--c-surface)]/50 hover:bg-[var(--c-surface)] transition-all duration-300 gap-6">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h4 className="font-semibold text-lg text-[var(--c-text)]">Day Reset Cutoff Window</h4>
+                        <span className="rounded-full bg-[var(--c-primary)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--c-primary)]">
+                          Streak Safety
+                        </span>
+                      </div>
+                      <p className="text-sm text-[var(--c-muted)] mt-1 max-w-xl">
+                        When does your day end? Habits completed anytime before this hour count towards your daily streak without resetting at midnight.
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={dayCutoffHour}
+                        onChange={(e) => handleCutoffChange(Number(e.target.value))}
+                        disabled={savingCutoff}
+                        className="appearance-none bg-[var(--c-surface-soft)] border border-[var(--c-border)] text-[var(--c-text)] rounded-[16px] pl-5 pr-12 py-3.5 outline-none focus:border-[var(--c-primary)]/50 focus:ring-1 focus:ring-[var(--c-primary)]/50 transition-all min-w-[240px] font-semibold cursor-pointer shadow-sm group-hover:border-[var(--c-border-hover)] disabled:opacity-50"
+                      >
+                        <option value={0}>12:00 AM (Midnight Standard)</option>
+                        <option value={3}>3:00 AM (Night Owl — Recommended)</option>
+                        <option value={4}>4:00 AM (Late Shift)</option>
+                        <option value={5}>5:00 AM (Early Riser)</option>
+                      </select>
+                      <ChevronRight size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--c-muted)] pointer-events-none rotate-90" />
+                    </div>
+                  </div>
+
                   {/* Dropdown 2 */}
                   <div className="group flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-[24px] border border-[var(--c-border)]/50 bg-[var(--c-surface)]/50 hover:bg-[var(--c-surface)] transition-all duration-300 gap-6">
                     <div>

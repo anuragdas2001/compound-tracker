@@ -3,6 +3,9 @@ import { getWelcomeEmailHtml } from "./templates/welcome";
 import { getVerificationEmailHtml } from "./templates/verification";
 import { getStreakWarningEmailHtml, StreakWarningEmailProps } from "./templates/streak-warning";
 import { getWeeklyDigestEmailHtml, WeeklyDigestEmailProps } from "./templates/weekly-digest";
+import { getOnboardingCompleteEmailHtml, OnboardingCompleteEmailProps } from "./templates/onboarding-complete";
+import { getOnboardingAbandonedEmailHtml, OnboardingAbandonedEmailProps } from "./templates/onboarding-abandoned";
+import { getPaymentReceiptEmailHtml, PaymentReceiptEmailProps } from "./templates/payment-receipt";
 
 const apiKey = process.env.RESEND_API_KEY;
 export const resend = apiKey ? new Resend(apiKey) : null;
@@ -124,6 +127,68 @@ export async function sendVerificationEmail({
   return sendEmail({
     to: email,
     subject: "Verify your Habitly email address",
+    html,
+  });
+}
+
+/**
+ * Sends an Onboarding Completion Email
+ */
+export async function sendOnboardingCompleteEmail({
+  email,
+  name,
+  habits,
+  dashboardUrl,
+}: OnboardingCompleteEmailProps & { email: string }): Promise<SendEmailResult> {
+  const html = getOnboardingCompleteEmailHtml({ name, habits, dashboardUrl });
+  return sendEmail({
+    to: email,
+    subject: "⚡ Your Habit Blueprint is Locked & Loaded!",
+    html,
+  });
+}
+
+/**
+ * Sends an Abandoned Onboarding Reminder Email
+ */
+export async function sendOnboardingAbandonedEmail({
+  email,
+  name,
+  resumeUrl,
+}: OnboardingAbandonedEmailProps & { email: string }): Promise<SendEmailResult> {
+  const html = getOnboardingAbandonedEmailHtml({ name, resumeUrl });
+  return sendEmail({
+    to: email,
+    subject: "🔥 Don't leave your new streak behind!",
+    html,
+  });
+}
+
+/**
+ * Sends a Payment Confirmation & Receipt Email
+ */
+export async function sendPaymentReceiptEmail({
+  email,
+  name,
+  plan,
+  amount,
+  orderId,
+  paymentId,
+  bonusSparks,
+  dashboardUrl,
+}: PaymentReceiptEmailProps & { email: string }): Promise<SendEmailResult> {
+  const html = getPaymentReceiptEmailHtml({
+    name,
+    plan,
+    amount,
+    orderId,
+    paymentId,
+    bonusSparks,
+    dashboardUrl,
+  });
+  return sendEmail({
+    to: email,
+    subject: `💎 Payment Confirmed — Welcome to Habitly ${plan}!`,
     html,
   });
 }

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@repo/db";
 import { verifyPaymentSignature } from "@/lib/razorpay";
+import { sendPaymentReceiptEmail } from "@/lib/email/resend";
 
 export async function POST(req: NextRequest) {
   try {
@@ -96,6 +97,25 @@ export async function POST(req: NextRequest) {
         },
       }),
     ]);
+
+    // Send Payment Confirmation & Receipt Email via Resend
+    if (payment.user?.email) {
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001";
+      try {
+        await sendPaymentReceiptEmail({
+          email: payment.user.email,
+          name: payment.user.name,
+          plan: upgradedPlan,
+          amount: Math.round(payment.amount / 100), // convert paise to rupees
+          orderId: payment.razorpayOrderId,
+          paymentId: paymentId || payment.razorpayPaymentId || undefined,
+          bonusSparks,
+          dashboardUrl: `${baseUrl}/dashboard`,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send payment receipt email:", emailErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

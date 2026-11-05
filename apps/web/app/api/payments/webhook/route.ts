@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@repo/db";
+import { sendPaymentReceiptEmail } from "@/lib/email/resend";
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       if (orderId) {
         const paymentRecord = await prisma.payment.findUnique({
           where: { razorpayOrderId: orderId },
+          include: { user: true },
         });
 
         if (paymentRecord && paymentRecord.status !== "captured") {
@@ -53,6 +55,23 @@ export async function POST(req: NextRequest) {
               data: { plan: paymentRecord.plan },
             }),
           ]);
+
+          if (paymentRecord.user?.email) {
+            const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001";
+            try {
+              await sendPaymentReceiptEmail({
+                email: paymentRecord.user.email,
+                name: paymentRecord.user.name,
+                plan: paymentRecord.plan,
+                amount: Math.round(paymentRecord.amount / 100),
+                orderId: paymentRecord.razorpayOrderId,
+                paymentId: paymentId || paymentRecord.razorpayPaymentId || undefined,
+                dashboardUrl: `${baseUrl}/dashboard`,
+              });
+            } catch (emailErr) {
+              console.error("[Webhook Email Error]:", emailErr);
+            }
+          }
         }
       }
     } else if (eventType === "payment.failed") {

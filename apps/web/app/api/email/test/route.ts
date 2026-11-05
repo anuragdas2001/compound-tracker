@@ -5,6 +5,9 @@ import {
   sendVerificationEmail,
   sendStreakWarningEmail,
   sendWeeklyDigestEmail,
+  sendOnboardingCompleteEmail,
+  sendOnboardingAbandonedEmail,
+  sendPaymentReceiptEmail,
   DEFAULT_FROM_EMAIL,
 } from "@/lib/email/resend";
 
@@ -16,9 +19,18 @@ export async function GET() {
     provider: "Resend",
     isConfigured: isKeyConfigured,
     fromEmail: DEFAULT_FROM_EMAIL,
-    supportedTypes: ["welcome", "verification", "streak", "weekly", "custom"],
+    supportedTypes: [
+      "welcome",
+      "verification",
+      "onboarding-complete",
+      "onboarding-abandoned",
+      "payment-receipt",
+      "streak",
+      "weekly",
+      "custom",
+    ],
     instructions:
-      "Send a POST request with { to: 'email@example.com', type: 'welcome' | 'verification' | 'streak' | 'weekly' } to dispatch a test email.",
+      "Send a POST request with { to: 'email@example.com', type: '<type>' } to test any template.",
   });
 }
 
@@ -58,6 +70,40 @@ export async function POST(req: NextRequest) {
         });
         break;
 
+      case "onboarding-complete":
+        result = await sendOnboardingCompleteEmail({
+          email: to,
+          name: data.name || "Explorer",
+          habits: data.habits || [
+            { title: "Morning Deep Work (45m)", category: "Focus" },
+            { title: "Hydrate 2L Daily", category: "Health" },
+            { title: "Evening Reading (15m)", category: "Mindset" },
+          ],
+          dashboardUrl: `${baseUrl}/dashboard`,
+        });
+        break;
+
+      case "onboarding-abandoned":
+        result = await sendOnboardingAbandonedEmail({
+          email: to,
+          name: data.name || "Explorer",
+          resumeUrl: `${baseUrl}/onboarding`,
+        });
+        break;
+
+      case "payment-receipt":
+        result = await sendPaymentReceiptEmail({
+          email: to,
+          name: data.name || "Explorer",
+          plan: data.plan || "PRO",
+          amount: data.amount ?? 599,
+          orderId: data.orderId || `order_${Date.now()}`,
+          paymentId: data.paymentId || `pay_${Date.now()}`,
+          bonusSparks: data.bonusSparks ?? 500,
+          dashboardUrl: `${baseUrl}/dashboard`,
+        });
+        break;
+
       case "streak":
         result = await sendStreakWarningEmail({
           email: to,
@@ -94,7 +140,7 @@ export async function POST(req: NextRequest) {
       default:
         return NextResponse.json(
           {
-            error: `Invalid template type: '${type}'. Valid types: welcome, verification, streak, weekly, custom`,
+            error: `Invalid template type: '${type}'. Valid types: welcome, verification, onboarding-complete, onboarding-abandoned, payment-receipt, streak, weekly, custom`,
           },
           { status: 400 }
         );
@@ -113,4 +159,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
-

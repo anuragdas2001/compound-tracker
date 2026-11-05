@@ -81,12 +81,24 @@ export const authOptions: NextAuthOptions = {
         if (userId) {
           const dbUser = await prisma.user.findUnique({
             where: { id: userId as string },
-            select: { emailVerified: true, plan: true }
+            select: {
+              emailVerified: true,
+              plan: true,
+              dayCutoffHour: true,
+              hasCompletedOnboarding: true,
+              habits: { select: { id: true }, take: 1 },
+            },
           });
           // @ts-expect-error adding custom properties
           session.user.emailVerified = dbUser?.emailVerified || null;
           // @ts-expect-error adding custom properties
           session.user.plan = dbUser?.plan || 'STARTER';
+          // @ts-expect-error adding custom properties
+          session.user.dayCutoffHour = dbUser?.dayCutoffHour ?? 0;
+          // @ts-expect-error adding custom properties
+          session.user.hasCompletedOnboarding = Boolean(
+            dbUser?.hasCompletedOnboarding || (dbUser?.habits && dbUser.habits.length > 0)
+          );
         }
       }
       return session;
