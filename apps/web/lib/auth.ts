@@ -5,6 +5,7 @@ import GithubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@repo/db";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "./email/resend";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -93,14 +94,27 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async createUser({ user }) {
-      await prisma.userGamification.create({
-        data: {
-          userId: user.id,
-          totalXp: 0,
-          level: 1,
-          sparksBalance: 150,
-        },
-      });
+      try {
+        await prisma.userGamification.create({
+          data: {
+            userId: user.id,
+            totalXp: 0,
+            level: 1,
+            sparksBalance: 150,
+          },
+        });
+
+        if (user.email) {
+          const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001";
+          await sendWelcomeEmail({
+            email: user.email,
+            name: user.name,
+            verificationUrl: `${baseUrl}/dashboard`,
+          });
+        }
+      } catch (err) {
+        console.error("[NextAuth createUser Event Error]:", err);
+      }
     },
   },
   pages: {

@@ -65,6 +65,7 @@ model User {
   powerUpInventory PowerUpInventory[]
   powerUpUsage     PowerUpUsage[]
   notifications    Notification[]
+  payments         Payment[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -183,4 +184,23 @@ model Notification {
   deduplicationKey String?
 
   createdAt DateTime @default(now())
+}
+
+model Payment {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?  @unique
+  razorpaySignature String?
+
+  amount            Int      // In paise or currency unit
+  currency          String   @default("INR")
+  plan              Plan
+  interval          String?  // "monthly", "yearly", "lifetime"
+  status            String   @default("created") // "created", "captured", "failed"
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

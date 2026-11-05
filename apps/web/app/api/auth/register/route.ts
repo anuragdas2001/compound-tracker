@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@repo/db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { sendWelcomeEmail } from "@/lib/email/resend";
 
 export async function POST(req: Request) {
   try {
@@ -13,8 +15,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -28,9 +32,9 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
+        name: name?.trim() || null,
         password: hashedPassword,
-        // Optional name if you want to store it, but current schema doesn't have a name field
         gamification: {
           create: {
             totalXp: 0,
@@ -41,6 +45,33 @@ export async function POST(req: Request) {
       },
     });
 
+    // Generate email verification token (valid for 24 hours)
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.verificationToken.create({
+      data: {
+        identifier: normalizedEmail,
+        token,
+        expires,
+      },
+    });
+
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001";
+    const verificationUrl = `${baseUrl}/api/auth/verify?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
+
+    // Send Welcome Email with verification link via Resend (or dev console fallback)
+    try {
+      await sendWelcomeEmail({
+        email: normalizedEmail,
+        name: user.name,
+        verificationUrl,
+      });
+    } catch (emailErr) {
+      console.error("Failed to send welcome email:", emailErr);
+      // Non-blocking: registration still succeeds even if email dispatch fails
+    }
+
     return NextResponse.json(
       { message: "User created successfully", userId: user.id },
       { status: 201 }
@@ -48,7 +79,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Register Error:", error);
     return NextResponse.json(
-      { message: "An error occurred during registration" },
+      { message: "Something went wrong" },
       { status: 500 }
     );
   }

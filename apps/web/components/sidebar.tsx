@@ -23,6 +23,7 @@ import {
   BadgeCheck,
   Zap,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { signOut, useSession } from 'next-auth/react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
@@ -53,9 +54,19 @@ export function AppSidebar({
 
   const handleVerify = async () => {
     setIsVerifying(true);
-    await fetch('/api/auth/verify-email', { method: 'POST' });
-    await update();
-    window.location.reload();
+    try {
+      const res = await fetch('/api/auth/verify-email', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Verification link sent to your email!');
+      } else {
+        toast.error(data.error || 'Failed to send verification email.');
+      }
+    } catch {
+      toast.error('Network error sending verification email.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   // Close mobile menu when pathname changes

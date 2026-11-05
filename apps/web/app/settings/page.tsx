@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { 
   Settings, 
@@ -369,10 +370,15 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <span className="text-xs font-semibold uppercase tracking-wider text-[var(--c-muted)]">Membership Plan</span>
-                      <div className="mt-1">
+                      <div className="mt-1 flex items-center gap-3">
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--c-primary)]/15 text-[var(--c-primary)] border border-[var(--c-primary)]/30">
                           {((session?.user as any)?.plan || 'STARTER')} PLAN
                         </span>
+                        {((session?.user as any)?.plan || 'STARTER') !== 'ELITE' && (
+                          <Link href="/pricing" className="text-xs font-bold text-[var(--c-primary)] hover:underline flex items-center gap-1">
+                            Upgrade Plan &rarr;
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

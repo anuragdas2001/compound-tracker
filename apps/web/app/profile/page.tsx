@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Shield
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
@@ -51,9 +52,19 @@ export default function ProfilePage() {
 
   const handleVerify = async () => {
     setIsVerifying(true);
-    await fetch('/api/auth/verify-email', { method: 'POST' });
-    await update();
-    window.location.reload();
+    try {
+      const res = await fetch('/api/auth/verify-email', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Verification link sent to your email!');
+      } else {
+        toast.error(data.error || 'Failed to send verification email.');
+      }
+    } catch {
+      toast.error('Network error sending verification email.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const name = session?.user?.name || session?.user?.email?.split('@')[0] || 'Habit Explorer';
