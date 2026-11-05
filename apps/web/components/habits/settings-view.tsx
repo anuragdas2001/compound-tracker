@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import { Bell, Download, LogOut, Target, Trash2, User } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import { C, fontDisplay } from "./constants";
 import type { Habit } from "./types";
@@ -12,6 +15,42 @@ type SettingsViewProps = {
 };
 
 export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "Habit Explorer";
+  const userEmail = session?.user?.email || "explorer@compound.app";
+
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(habits, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `habits_export_${new Date().toISOString().split("T")[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast.success("Habits exported as JSON!");
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["ID", "Title", "Schedule Mode", "Days", "Total Logs", "Created At"];
+    const rows = habits.map((h) => [
+      h.id,
+      `"${h.name.replace(/"/g, '""')}"`,
+      h.mode || "daily",
+      h.days ? `"${h.days.join(";")}"` : "all",
+      h.logs?.length || 0,
+      new Date().toISOString(),
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", encodeURI(csvContent));
+    downloadAnchor.setAttribute("download", `habits_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast.success("Habits exported as CSV!");
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <section className="flex items-center gap-6 rounded-[28px] border p-6" style={{ borderColor: C.border, backgroundColor: C.surface }}>
@@ -19,11 +58,15 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
           <User className="h-8 w-8" style={{ color: C.muted }} />
         </div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: C.text, ...fontDisplay }}>Explorer</h2>
-          <p className="text-sm" style={{ color: C.muted }}>explorer@compound.app</p>
-          <button className="mt-3 rounded-full px-4 py-1.5 text-xs font-semibold transition" style={{ backgroundColor: C.surfaceSoft, color: C.text }}>
+          <h2 className="text-xl font-bold" style={{ color: C.text, ...fontDisplay }}>{userName}</h2>
+          <p className="text-sm" style={{ color: C.muted }}>{userEmail}</p>
+          <Link
+            href="/profile"
+            className="mt-3 inline-block rounded-full px-4 py-1.5 text-xs font-semibold transition hover:brightness-110"
+            style={{ backgroundColor: C.surfaceSoft, color: C.text }}
+          >
             Edit Profile
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -42,11 +85,21 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
             <Download className="h-5 w-5" style={{ color: C.primary }} />
             <h3 className="font-semibold" style={{ color: C.text }}>Data &amp; Sync</h3>
           </div>
-          <button className="flex w-full items-center justify-between rounded-xl p-3 transition" style={{ backgroundColor: C.surfaceSoft, color: C.text }}>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="flex w-full items-center justify-between rounded-xl p-3 transition hover:brightness-110"
+            style={{ backgroundColor: C.surfaceSoft, color: C.text }}
+          >
             <span className="text-sm font-medium">Export as CSV</span>
             <Download className="h-4 w-4" style={{ color: C.muted }} />
           </button>
-          <button className="flex w-full items-center justify-between rounded-xl p-3 transition" style={{ backgroundColor: C.surfaceSoft, color: C.text }}>
+          <button
+            type="button"
+            onClick={handleExportJSON}
+            className="flex w-full items-center justify-between rounded-xl p-3 transition hover:brightness-110"
+            style={{ backgroundColor: C.surfaceSoft, color: C.text }}
+          >
             <span className="text-sm font-medium">Export as JSON</span>
             <Download className="h-4 w-4" style={{ color: C.muted }} />
           </button>
@@ -67,6 +120,7 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
             >
               <span className="font-medium" style={{ color: C.text }}>{habit.name}</span>
               <button
+                type="button"
                 onClick={() => deleteHabit(habit.id)}
                 className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/10"
                 title="Delete Habit"
@@ -84,7 +138,12 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
       </section>
 
       <section className="flex justify-center pt-4">
-        <button className="flex items-center gap-2 text-sm transition" style={{ color: C.muted }}>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-2 text-sm transition hover:text-red-400"
+          style={{ color: C.muted }}
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
@@ -102,23 +161,29 @@ function ToggleRow({
   desc: string;
   defaultOn: boolean;
 }) {
-  const [isOn, setIsOn] = useState(defaultOn);
+  const [on, setOn] = useState(defaultOn);
 
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h4 className="text-sm font-medium" style={{ color: C.text }}>{label}</h4>
-        <p className="text-xs" style={{ color: C.muted }}>{desc}</p>
+        <div className="text-sm font-medium" style={{ color: C.text }}>{label}</div>
+        <div className="text-xs" style={{ color: C.muted }}>{desc}</div>
       </div>
       <button
-        onClick={() => setIsOn(!isOn)}
-        className="flex h-6 w-11 items-center rounded-full px-1 transition-colors"
-        style={{ backgroundColor: isOn ? C.primary : C.border }}
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={() => setOn(!on)}
+        className="relative h-6 w-11 rounded-full transition-colors"
+        style={{
+          backgroundColor: on ? C.primary : C.surfaceSoft,
+        }}
       >
-        <div
-          className={`h-4 w-4 rounded-full bg-white transition-transform ${
-            isOn ? "translate-x-5" : "translate-x-0"
-          }`}
+        <span
+          className="block h-5 w-5 rounded-full bg-white transition-transform"
+          style={{
+            transform: on ? "translateX(22px)" : "translateX(2px)",
+          }}
         />
       </button>
     </div>
