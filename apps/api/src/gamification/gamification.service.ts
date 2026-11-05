@@ -97,6 +97,17 @@ export class GamificationService {
         },
       }),
     ]);
+
+    if (newLevel > current.level) {
+      await this.prisma.notification.create({
+        data: {
+          userId,
+          type: 'LEVEL_UP',
+          title: `Level Up! Reached Level ${newLevel}`,
+          body: `Congratulations! Your daily compounding effort has elevated you to Player Level ${newLevel}!`,
+        },
+      });
+    }
   }
 
   /**
@@ -265,5 +276,122 @@ export class GamificationService {
       where: { userId, powerUpType: 'STREAK_SHIELD' },
       orderBy: { missedDate: 'desc' },
     });
+  }
+
+  /**
+   * Retrieves the real leaderboard ranked by total XP and sparks.
+   */
+  async getLeaderboard(currentUserId?: string) {
+    const gamifications = await this.prisma.userGamification.findMany({
+      take: 100,
+      orderBy: [
+        { totalXp: 'desc' },
+        { sparksBalance: 'desc' },
+      ],
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            habits: {
+              where: { archived: false },
+              select: {
+                id: true,
+                logs: {
+                  select: { completedAt: true },
+                  orderBy: { completedAt: 'desc' },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const entries = gamifications.map((item, index) => {
+      const user = item.user;
+      const rawName = user?.name || user?.email?.split('@')[0] || 'Habit Explorer';
+      const username = '@' + (user?.email?.split('@')[0] || `user_${item.userId.slice(-4)}`);
+
+      // Calculate max streak across all habits
+      let maxStreak = 0;
+      if (user?.habits) {
+        for (const habit of user.habits) {
+          const logs = habit.logs || [];
+          let current = 0;
+          const checkDate = new Date();
+          checkDate.setHours(0, 0, 0, 0);
+
+          for (let d = 0; d < 365; d++) {
+            const hasLog = logs.some((l) => {
+              const dt = new Date(l.completedAt);
+              dt.setHours(0, 0, 0, 0);
+              return dt.getTime() === checkDate.getTime();
+            });
+            if (hasLog) {
+              current++;
+              checkDate.setDate(checkDate.getDate() - 1);
+            } else if (d === 0) {
+              checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+              break;
+            }
+          }
+          if (current > maxStreak) maxStreak = current;
+        }
+      }
+
+      const hasRecentLog = user?.habits?.some((h) => {
+        const lastLog = h.logs[0];
+        if (!lastLog) return false;
+        const now = Date.now();
+        const logTime = new Date(lastLog.completedAt).getTime();
+        return now - logTime < 24 * 60 * 60 * 1000;
+      });
+
+      return {
+        id: item.userId,
+        rank: index + 1,
+        name: rawName,
+        username,
+        avatar: user?.image || null,
+        sparks: item.sparksBalance,
+        totalXp: item.totalXp,
+        level: item.level,
+        streak: maxStreak,
+        trend: hasRecentLog ? ('up' as const) : ('same' as const),
+        isUser: item.userId === currentUserId,
+      };
+    });
+
+    return {
+      global: entries,
+      weekly: entries,
+      friends: entries.filter((e) => e.isUser),
+    };
+  }
+
+  /**
+   * Gets user notifications.
+   */
+  async getNotifications(userId: string) {
+    return this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+  }
+
+  /**
+   * Marks all unread notifications as read.
+   */
+  async markNotificationsAsRead(userId: string) {
+    await this.prisma.notification.updateMany({
+      where: { userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    return { success: true };
   }
 }

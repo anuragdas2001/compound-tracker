@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { 
   Settings, 
   User, 
@@ -14,7 +15,9 @@ import {
   Moon,
   Sun,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Mail,
+  Zap
 } from 'lucide-react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
@@ -29,6 +32,7 @@ const SETTINGS_TABS = [
 ];
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('preferences');
   const [theme, setTheme] = useState('dark');
 
@@ -349,19 +353,80 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Placeholder for other tabs */}
-            {['account', 'integrations'].includes(activeTab) && (
-              <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="p-16 rounded-[32px] border border-[var(--c-border)]/50 bg-[var(--c-surface)] text-center flex flex-col items-center justify-center min-h-[400px]">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-[var(--c-surface-soft)] text-[var(--c-primary)] mb-6 shadow-inner border border-[var(--c-border)]/50">
-                    {activeTab === 'account' ? <User size={40} /> : <Smartphone size={40} />}
+            {/* Account Info Tab */}
+            {activeTab === 'account' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--c-border)]/40">
+                  <User className="text-[var(--c-primary)] opacity-80" size={24} />
+                  <h3 className="text-3xl font-semibold text-[var(--c-text)]" style={fontDisplay}>Account Information</h3>
+                </div>
+
+                <div className="p-8 rounded-[28px] border border-[var(--c-border)]/60 bg-[var(--c-surface)] space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[var(--c-border)]/40 gap-4">
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--c-muted)]">Full Name</span>
+                      <p className="text-xl font-bold text-[var(--c-text)] mt-1">{session?.user?.name || 'Habit Explorer'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--c-muted)]">Membership Plan</span>
+                      <div className="mt-1">
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--c-primary)]/15 text-[var(--c-primary)] border border-[var(--c-primary)]/30">
+                          {((session?.user as any)?.plan || 'STARTER')} PLAN
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-3xl font-bold text-[var(--c-text)] mb-3" style={fontDisplay}>
-                    {SETTINGS_TABS.find(t => t.id === activeTab)?.label}
-                  </h3>
-                  <p className="text-[var(--c-muted)] font-medium max-w-md text-lg">
-                    This module is currently being forged. Check back soon for the ultimate experience.
-                  </p>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[var(--c-border)]/40 gap-4">
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--c-muted)]">Email Address</span>
+                      <p className="text-lg font-medium text-[var(--c-text)] mt-1 flex items-center gap-2">
+                        <Mail size={16} className="text-[var(--c-muted)]" />
+                        {session?.user?.email || 'explorer@compound.app'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--c-muted)]">Account ID</span>
+                      <p className="text-xs font-mono text-[var(--c-muted)] mt-1">{(session?.user as any)?.id || 'local-session'}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/login' })}
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 font-bold transition-all duration-300"
+                    >
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Integrations Tab */}
+            {activeTab === 'integrations' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--c-border)]/40">
+                  <Smartphone className="text-[var(--c-primary)] opacity-80" size={24} />
+                  <h3 className="text-3xl font-semibold text-[var(--c-text)]" style={fontDisplay}>Integrations & Sync</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-6 rounded-[24px] border border-[var(--c-border)]/50 bg-[var(--c-surface)]">
+                    <div>
+                      <h4 className="font-semibold text-lg text-[var(--c-text)]">Google Calendar Sync</h4>
+                      <p className="text-sm text-[var(--c-muted)] mt-1">Sync daily habit completion blocks into Google Calendar.</p>
+                    </div>
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[var(--c-surface-soft)] text-[var(--c-muted)] border border-[var(--c-border)]">Coming Soon</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-6 rounded-[24px] border border-[var(--c-border)]/50 bg-[var(--c-surface)]">
+                    <div>
+                      <h4 className="font-semibold text-lg text-[var(--c-text)]">Data Export (JSON / CSV)</h4>
+                      <p className="text-sm text-[var(--c-muted)] mt-1">Export your complete habit logging history anytime.</p>
+                    </div>
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[var(--c-primary)]/10 text-[var(--c-primary)] border border-[var(--c-primary)]/20">Available in Habits &gt; Settings</span>
+                  </div>
                 </div>
               </div>
             )}

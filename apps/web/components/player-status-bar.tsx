@@ -7,6 +7,7 @@ import { Bell, User, Sun, Moon, Zap, Shield, Sparkles, X, ChevronRight } from "l
 import Link from "next/link";
 import { useGamificationSummary } from "@repo/query/gamification/useGamificationSummary";
 import { useUseStreakShield } from "@repo/query/gamification/useGamificationMutations";
+import { useNotifications, useMarkNotificationsAsRead } from "@repo/query/gamification/useNotifications";
 import { useHabits } from "@repo/query/habits/useHabits";
 import { toast } from "react-hot-toast";
 
@@ -16,10 +17,13 @@ export default function PlayerStatusBar() {
   const [sparks, setSparks] = useSparksState();
   const { data: summary } = useGamificationSummary(userId);
   const { data: habits = [] } = useHabits(userId);
+  const { data: notifications = [] } = useNotifications(userId);
+  const markReadMutation = useMarkNotificationsAsRead();
   const useShieldMutation = useUseStreakShield();
 
   const [shieldModalOpen, setShieldModalOpen] = useState(false);
   const [levelModalOpen, setLevelModalOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   // Theme tracking - default is dark
   const [theme, setTheme] = useState("dark");
@@ -125,15 +129,70 @@ export default function PlayerStatusBar() {
         </button>
 
         {/* NOTIFICATIONS */}
-        <button
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-[var(--c-muted)] dark:hover:bg-white/[0.05] dark:hover:text-[var(--c-text)]"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          {summary?.unreadNotifications ? (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#0c0d11]"></span>
-          ) : null}
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => {
+              setNotifOpen((prev) => !prev);
+              if (userId && summary?.unreadNotifications) {
+                markReadMutation.mutate(userId);
+              }
+            }}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-[var(--c-muted)] dark:hover:bg-white/[0.05] dark:hover:text-[var(--c-text)]"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            {summary?.unreadNotifications ? (
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#0c0d11]"></span>
+            ) : null}
+          </button>
+
+          {/* Notifications Dropdown Panel */}
+          {notifOpen && (
+            <div 
+              className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-4 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200"
+              style={{ backgroundColor: 'var(--c-surface)' }}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--c-border)]/50">
+                <span className="font-bold text-sm text-[var(--c-text)]">Notifications</span>
+                {notifications.length > 0 && userId && (
+                  <button 
+                    onClick={() => markReadMutation.mutate(userId)}
+                    className="text-xs text-[var(--c-primary)] hover:underline font-medium"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 max-h-72 overflow-y-auto space-y-2.5 custom-scrollbar">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[var(--c-muted)]">
+                    No new notifications. Keep compounding your daily habits!
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div 
+                      key={n.id}
+                      className={`p-3 rounded-xl border text-xs transition-colors ${
+                        n.readAt 
+                          ? 'border-[var(--c-border)]/40 bg-[var(--c-surface-soft)]/40 text-[var(--c-muted)]' 
+                          : 'border-[var(--c-primary)]/30 bg-[var(--c-primary)]/5 text-[var(--c-text)]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm">{n.title}</span>
+                        <span className="text-[10px] text-[var(--c-muted)]">
+                          {new Date(n.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[var(--c-muted)] leading-relaxed">{n.body}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* AVATAR */}
         <Link

@@ -31,4 +31,25 @@ export class GamificationController {
     }
     return this.gamificationService.getShieldUsages(userId);
   }
+
+  @Get('leaderboard')
+  getLeaderboard(@Query('userId') userId?: string) {
+    return this.gamificationService.getLeaderboard(userId);
+  }
+
+  @Get('notifications')
+  getNotifications(@Query('userId') userId?: string) {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    return this.gamificationService.getNotifications(userId);
+  }
+
+  @Post('notifications/read')
+  markNotificationsAsRead(@Body('userId') userId?: string) {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    return this.gamificationService.markNotificationsAsRead(userId);
+  }
 }

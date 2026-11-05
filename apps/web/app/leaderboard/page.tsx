@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useLeaderboard } from '@repo/query/gamification/useLeaderboard';
 import { 
   Trophy, 
   Flame, 
@@ -12,47 +14,23 @@ import {
   Minus,
   Globe,
   MapPin,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
-// Mock data for the leaderboard
-const mockLeaderboards = {
-  global: [
-    { id: 1, name: 'Alex Rivera', username: '@arivera', sparks: 24500, streak: 120, trend: 'up' },
-    { id: 2, name: 'Jordan Lee', username: '@jlee_99', sparks: 21200, streak: 95, trend: 'same' },
-    { id: 3, name: 'Sam Taylor', username: '@samt', sparks: 19850, streak: 110, trend: 'down' },
-    { id: 4, name: 'Casey Smith', username: '@caseys', sparks: 18500, streak: 80, trend: 'up' },
-    { id: 5, name: 'Riley Brown', username: '@rileyb', sparks: 15900, streak: 60, trend: 'down' },
-    { id: 6, name: 'Taylor Swift', username: '@tswift', sparks: 14200, streak: 55, trend: 'up' },
-    { id: 7, name: 'Morgan Doe', username: '@mdoe', sparks: 12100, streak: 40, trend: 'same' },
-    { id: 8, name: 'You', username: '@you', sparks: 4850, streak: 45, trend: 'up', isUser: true },
-    { id: 9, name: 'Jamie Lannister', username: '@kingslayer', sparks: 4200, streak: 30, trend: 'down' },
-    { id: 10, name: 'Chris Evans', username: '@cevans', sparks: 3900, streak: 25, trend: 'up' },
-  ],
-  country: [
-    { id: 1, name: 'Priya Sharma', username: '@priya_s', sparks: 18400, streak: 98, trend: 'up' },
-    { id: 2, name: 'Ravi Kumar', username: '@ravik', sparks: 17200, streak: 85, trend: 'same' },
-    { id: 3, name: 'You', username: '@you', sparks: 4850, streak: 45, trend: 'up', isUser: true },
-    { id: 4, name: 'Ananya Patel', username: '@ananyap', sparks: 4100, streak: 30, trend: 'down' },
-    { id: 5, name: 'Vikram Singh', username: '@vikram', sparks: 3900, streak: 25, trend: 'up' },
-  ],
-  friends: [
-    { id: 1, name: 'You', username: '@you', sparks: 4850, streak: 45, trend: 'up', isUser: true },
-    { id: 2, name: 'Emma Watson', username: '@emma', sparks: 3200, streak: 20, trend: 'down' },
-    { id: 3, name: 'John Doe', username: '@jdoe', sparks: 2100, streak: 12, trend: 'up' },
-    { id: 4, name: 'Sarah Connor', username: '@sarahc', sparks: 1500, streak: 8, trend: 'same' },
-  ]
-};
-
-type TabId = 'global' | 'country' | 'friends';
+type TabId = 'global' | 'weekly' | 'friends';
 
 export default function LeaderboardPage() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const { data: leaderboardData, isLoading } = useLeaderboard(userId);
+
   const [activeTab, setActiveTab] = useState<TabId>('global');
 
-  const leaderboard = mockLeaderboards[activeTab];
+  const leaderboard = leaderboardData?.[activeTab] || [];
   const topThree = leaderboard.slice(0, 3);
   const restOfBoard = leaderboard.slice(3);
 
@@ -66,8 +44,8 @@ export default function LeaderboardPage() {
 
   const tabs = [
     { id: 'global', label: 'Global', icon: Globe },
-    { id: 'country', label: 'National', icon: MapPin },
-    { id: 'friends', label: 'Friends', icon: Users },
+    { id: 'weekly', label: 'Weekly', icon: MapPin },
+    { id: 'friends', label: 'Your Circle', icon: Users },
   ] as const;
 
   return (
@@ -125,8 +103,27 @@ export default function LeaderboardPage() {
           </div>
         </header>
 
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-[var(--c-primary)]" />
+            <p className="text-sm font-medium text-[var(--c-muted)]">Loading live leaderboard rankings...</p>
+          </div>
+        )}
+
+        {!isLoading && leaderboard.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl border border-[var(--c-border)] bg-[var(--c-surface)] p-8">
+            <Trophy className="h-12 w-12 text-[var(--c-muted)] mb-3 opacity-40" />
+            <h3 className="text-xl font-bold text-[var(--c-text)]">No rankings yet</h3>
+            <p className="text-sm text-[var(--c-muted)] mt-1 max-w-md">
+              Complete your scheduled habits today to earn XP, collect Sparks, and take the #1 podium!
+            </p>
+          </div>
+        )}
+
         {/* Top 3 Podium */}
-        <div className="mt-16 flex flex-col sm:flex-row items-end justify-center gap-4 sm:gap-6 lg:gap-10 pb-8 border-b border-[var(--c-border)]/50 min-h-[250px]">
+        {!isLoading && leaderboard.length > 0 && (
+          <div className="mt-16 flex flex-col sm:flex-row items-end justify-center gap-4 sm:gap-6 lg:gap-10 pb-8 border-b border-[var(--c-border)]/50 min-h-[250px]">
           
           {/* Rank 2 - Silver */}
           {topThree[1] && (
@@ -192,8 +189,10 @@ export default function LeaderboardPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* List Rankings */}
+        {!isLoading && restOfBoard.length > 0 && (
         <div className="mt-8 space-y-3">
           {restOfBoard.map((user, index) => {
             const rank = index + 4;
@@ -255,12 +254,13 @@ export default function LeaderboardPage() {
             );
           })}
           
-          {restOfBoard.length === 0 && (
+          {restOfBoard.length === 0 && topThree.length > 0 && (
             <div className="text-center py-10 text-[var(--c-muted)]">
               No more players to display in this leaderboard.
             </div>
           )}
         </div>
+        )}
 
       </div>
     </main>

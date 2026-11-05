@@ -19,8 +19,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { useHabits } from '@repo/query/habits/useHabits';
 import { useCreateHabit } from '@repo/query/habits/useMutations';
-
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+import { useMemo } from 'react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
@@ -32,8 +31,6 @@ const SUGGESTED_HABITS = [
   { title: 'Meditation', description: '10 minutes of mindfulness', icon: Sparkles },
 ];
 
-const GOAL_DAY = 21;
-const GOAL_TOTAL = 30;
 const RING_RADIUS = 58;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -68,20 +65,51 @@ export default function DashboardPage() {
   const totalLogged = computedHabits.reduce((acc, h) => acc + h.streak, 0); 
   const successRate = activeCount > 0 ? Math.min(100, Math.round((totalLogged / Math.max(totalPossible, 1)) * 100)) + '%' : '0%';
 
-  const todayCompletion = activeCount > 0 ? Math.round((completedCount / activeCount) * 100) : 0;
-  
-  // For now, keep visual dummy history if logs aren't spanning a full week yet
-  const weeklyBase = [70, 85, 90, 65, 100, 80];
-  const weekly = [...weeklyBase, todayCompletion];
+  const maxStreak = computedHabits.length > 0 ? Math.max(...computedHabits.map(h => h.streak)) : 0;
 
+  // Real 7-day completion rates
+  const weekly = useMemo(() => {
+    const daysArr: number[] = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayKey = d.toISOString().split('T')[0] || '';
+      
+      let completedOnDay = 0;
+      for (const h of activeHabits) {
+        const hasLog = h.logs?.some((l: any) => (l.completedAt as string).startsWith(dayKey));
+        if (hasLog) completedOnDay++;
+      }
+      
+      const rate = activeCount > 0 ? Math.min(100, Math.round((completedOnDay / activeCount) * 100)) : 0;
+      daysArr.push(rate);
+    }
+    return daysArr;
+  }, [activeHabits, activeCount]);
+
+  const weekDayLabels = useMemo(() => {
+    const labels: string[] = [];
+    const dayChars = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      labels.push(dayChars[d.getDay()] || 'D');
+    }
+    return labels;
+  }, []);
+
+  // Real 30-Day Goal Ring based on user's longest streak
+  const GOAL_DAY = Math.min(30, maxStreak);
+  const GOAL_TOTAL = 30;
   const goalProgress = Math.round((GOAL_DAY / GOAL_TOTAL) * 100);
   const ringOffset = RING_CIRCUMFERENCE * (1 - goalProgress / 100);
 
   const todayLabel = new Date()
     .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     .toUpperCase();
-
-  const maxStreak = computedHabits.length > 0 ? Math.max(...computedHabits.map(h => h.streak)) : 0;
 
   const stats = [
     { title: 'Active Habits', value: activeCount, icon: Target, accent: 'var(--c-pale)' },
@@ -448,7 +476,7 @@ export default function DashboardPage() {
                         className={`text-[10px] font-bold ${isToday ? 'text-[#07140c] bg-[#a8fe43] dark:text-[#a8fe43] dark:bg-transparent px-1.5 py-0.5 rounded-full' : 'text-slate-400 dark:text-[var(--c-muted)]'}`}
                         style={fontMono}
                       >
-                        {DAYS[index]}
+                        {weekDayLabels[index]}
                       </span>
                     </div>
                   );

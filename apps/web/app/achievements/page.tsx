@@ -1,5 +1,12 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+import { useHabits } from '@repo/query/habits/useHabits';
+import { useGamificationSummary } from '@repo/query/gamification/useGamificationSummary';
+import { useShieldUsages } from '@repo/query/gamification/useGamificationMutations';
+import { habitStreak } from '../../components/habits/utils';
+
 import { 
   Award, 
   Flame, 
@@ -10,105 +17,155 @@ import {
   Trophy, 
   Star,
   Lock,
-  Medal
+  Medal,
+  Shield
 } from 'lucide-react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
-// Mock data for achievements
-const achievements = [
-  { 
-    id: 1, 
-    title: 'Bronze Pioneer', 
-    description: 'Complete your first habit.', 
-    icon: Trophy, 
-    unlockedAt: 'Oct 1, 2026', 
-    category: 'Milestones',
-    rarity: 'Common',
-    color: '#CD7F32' // Bronze
-  },
-  { 
-    id: 2, 
-    title: 'Silver Streak', 
-    description: 'Maintain a 7-day streak on any habit.', 
-    icon: Trophy, 
-    unlockedAt: 'Oct 5, 2026', 
-    category: 'Streaks',
-    rarity: 'Uncommon',
-    color: '#C0C0C0' // Silver
-  },
-  { 
-    id: 3, 
-    title: 'Gold Standard', 
-    description: 'Complete all habits for 3 consecutive days.', 
-    icon: Trophy, 
-    unlockedAt: 'Oct 8, 2026', 
-    category: 'Streaks',
-    rarity: 'Rare',
-    color: '#FFD700' // Gold
-  },
-  { 
-    id: 4, 
-    title: 'Platinum Collector', 
-    description: 'Earn a total of 1,000 sparks.', 
-    icon: Trophy, 
-    unlockedAt: 'Oct 9, 2026', 
-    category: 'Milestones',
-    rarity: 'Epic',
-    color: '#E2E8F0' // Platinum
-  },
-  { 
-    id: 5, 
-    title: 'Diamond Consistency', 
-    description: 'Maintain a 30-day streak on any habit.', 
-    icon: Trophy, 
-    unlockedAt: null, 
-    category: 'Streaks',
-    rarity: 'Legendary',
-    color: '#B9F2FF' // Diamond
-  },
-  { 
-    id: 6, 
-    title: 'Ruby Master', 
-    description: 'Complete a habit before 8 AM for 7 days.', 
-    icon: Trophy, 
-    unlockedAt: null, 
-    category: 'Challenges',
-    rarity: 'Legendary',
-    color: '#E0115F' // Ruby
-  },
-  { 
-    id: 7, 
-    title: 'Emerald Perfectionist', 
-    description: 'Achieve a 100% completion rate for a week.', 
-    icon: Trophy, 
-    unlockedAt: null, 
-    category: 'Challenges',
-    rarity: 'Legendary',
-    color: '#50C878' // Emerald
-  },
-  { 
-    id: 8, 
-    title: 'Obsidian Champion', 
-    description: 'Have 5 active habits with a 14+ day streak.', 
-    icon: Trophy, 
-    unlockedAt: null, 
-    category: 'Milestones',
-    rarity: 'Mythic',
-    color: '#8B5CF6' // Obsidian/Purple
-  },
-];
-
 export default function AchievementsPage() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+
+  const { data: habits = [] } = useHabits(userId);
+  const { data: summary } = useGamificationSummary(userId);
+  const { data: shieldUsages = [] } = useShieldUsages(userId);
+
+  const activeHabits = useMemo(() => habits.filter((h: any) => !h.archived), [habits]);
+
+  // Total completed logs
+  const { totalLogs, firstLogDate } = useMemo(() => {
+    let count = 0;
+    let earliest: Date | null = null;
+    for (const h of habits) {
+      for (const log of h.logs || []) {
+        count++;
+        const d = new Date(log.completedAt);
+        if (!earliest || d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+    }
+    return {
+      totalLogs: count,
+      firstLogDate: earliest ? earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
+    };
+  }, [habits]);
+
+  // Max streak
+  const maxStreak = useMemo(() => {
+    let best = 0;
+    for (const h of activeHabits) {
+      const s = habitStreak(h.logs || [], shieldUsages, h.id);
+      if (s > best) best = s;
+    }
+    return best;
+  }, [activeHabits, shieldUsages]);
+
+  // Dynamic real achievements evaluated from actual database state
+  const achievements = useMemo(() => {
+    const sparksBalance = summary?.sparksBalance ?? 150;
+    const playerLevel = summary?.level ?? 1;
+    const hasShield = (summary?.shields ?? 0) > 0 || shieldUsages.length > 0;
+
+    return [
+      { 
+        id: 1, 
+        title: 'Bronze Pioneer', 
+        description: 'Complete your first habit in the platform.', 
+        icon: Trophy, 
+        unlockedAt: totalLogs >= 1 ? (firstLogDate || 'Unlocked') : null, 
+        category: 'Milestones',
+        rarity: 'Common',
+        color: '#CD7F32',
+        progress: `${Math.min(1, totalLogs)} / 1`,
+      },
+      { 
+        id: 2, 
+        title: 'Silver Streak', 
+        description: 'Maintain a 7-day streak on any habit.', 
+        icon: Medal, 
+        unlockedAt: maxStreak >= 7 ? 'Unlocked' : null, 
+        category: 'Streaks',
+        rarity: 'Uncommon',
+        color: '#C0C0C0',
+        progress: `${Math.min(7, maxStreak)} / 7 days`,
+      },
+      { 
+        id: 3, 
+        title: 'Gold Standard', 
+        description: 'Reach a 30-day streak of compounding habits.', 
+        icon: Trophy, 
+        unlockedAt: maxStreak >= 30 ? 'Unlocked' : null, 
+        category: 'Streaks',
+        rarity: 'Rare',
+        color: '#FFD700',
+        progress: `${Math.min(30, maxStreak)} / 30 days`,
+      },
+      { 
+        id: 4, 
+        title: 'Sparks Vault', 
+        description: 'Accumulate a balance of 250 or more Sparks.', 
+        icon: Zap, 
+        unlockedAt: sparksBalance >= 250 ? 'Unlocked' : null, 
+        category: 'Milestones',
+        rarity: 'Epic',
+        color: '#F59E0B',
+        progress: `${Math.min(250, sparksBalance)} / 250 Sparks`,
+      },
+      { 
+        id: 5, 
+        title: 'Centurion', 
+        description: 'Log 100 total habit check-in sessions.', 
+        icon: Target, 
+        unlockedAt: totalLogs >= 100 ? 'Unlocked' : null, 
+        category: 'Milestones',
+        rarity: 'Legendary',
+        color: '#B9F2FF',
+        progress: `${Math.min(100, totalLogs)} / 100 check-ins`,
+      },
+      { 
+        id: 6, 
+        title: 'Habit Architect', 
+        description: 'Build a system of 5 or more active habits.', 
+        icon: Star, 
+        unlockedAt: activeHabits.length >= 5 ? 'Unlocked' : null, 
+        category: 'Challenges',
+        rarity: 'Uncommon',
+        color: '#50C878',
+        progress: `${Math.min(5, activeHabits.length)} / 5 habits`,
+      },
+      { 
+        id: 7, 
+        title: 'Shield Guardian', 
+        description: 'Acquire or activate a Streak Shield to preserve consistency.', 
+        icon: Shield, 
+        unlockedAt: hasShield ? 'Unlocked' : null, 
+        category: 'Milestones',
+        rarity: 'Rare',
+        color: '#3B82F6',
+        progress: hasShield ? '1 / 1' : '0 / 1',
+      },
+      { 
+        id: 8, 
+        title: 'Level 5 Master', 
+        description: 'Reach Player Level 5 through consistent habit tracking.', 
+        icon: Award, 
+        unlockedAt: playerLevel >= 5 ? 'Unlocked' : null, 
+        category: 'Milestones',
+        rarity: 'Mythic',
+        color: '#8B5CF6',
+        progress: `Level ${playerLevel} / 5`,
+      },
+    ];
+  }, [totalLogs, firstLogDate, maxStreak, summary, shieldUsages, activeHabits]);
+
   const unlockedCount = achievements.filter(a => a.unlockedAt).length;
   const totalCount = achievements.length;
   const progress = Math.round((unlockedCount / totalCount) * 100);
 
-  // Get the most recently unlocked achievement
-  const recentUnlock = [...achievements]
-    .filter(a => a.unlockedAt)
-    .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime())[0];
+  const recentUnlock = achievements.find(a => a.unlockedAt);
 
   return (
     <main
@@ -138,14 +195,14 @@ export default function AchievementsPage() {
               </h1>
             </div>
             <p className="mt-4 text-[var(--c-muted)] max-w-xl">
-              Celebrate your consistency. Here lies the gallery of your milestones, streaks, and extraordinary results.
+              Celebrate your consistency. Real-time milestones and badges unlocked through your actual daily compounding actions.
             </p>
           </div>
           
           {/* Progress Indicator */}
           <div className="flex flex-col items-end">
             <span className="text-sm font-medium text-[var(--c-muted)] mb-2" style={fontMono}>
-              {unlockedCount} / {totalCount} UNLOCKED
+              {unlockedCount} / {totalCount} UNLOCKED ({progress}%)
             </span>
             <div className="h-2 w-48 bg-[var(--c-surface-soft)] rounded-full overflow-hidden">
               <div 
@@ -159,7 +216,6 @@ export default function AchievementsPage() {
         {/* Latest Achievement Spotlight */}
         {recentUnlock && (
           <div className="relative overflow-hidden rounded-3xl border border-[var(--c-primary)]/30 bg-[var(--c-surface)] p-8 sm:p-10 shadow-[0_0_40px_rgba(34,197,94,0.05)] group">
-            {/* Background Glow */}
             <div 
               className="absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-20 blur-3xl transition-opacity group-hover:opacity-30"
               style={{ backgroundColor: recentUnlock.color }}
@@ -175,7 +231,7 @@ export default function AchievementsPage() {
               
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <span className="text-xs uppercase tracking-widest text-[var(--c-primary)] font-semibold">Latest Unlock</span>
+                  <span className="text-xs uppercase tracking-widest text-[var(--c-primary)] font-semibold">Active Milestone</span>
                   <span className="text-xs text-[var(--c-muted)] bg-[var(--c-surface-soft)] px-2 py-0.5 rounded-full" style={fontMono}>
                     {recentUnlock.unlockedAt}
                   </span>
@@ -198,68 +254,68 @@ export default function AchievementsPage() {
           </h3>
           
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {achievements.map((achievement) => {
-              const Icon = achievement.icon;
-              const isUnlocked = !!achievement.unlockedAt;
-              
+            {achievements.map((item) => {
+              const isUnlocked = !!item.unlockedAt;
+              const Icon = item.icon;
+
               return (
                 <div 
-                  key={achievement.id} 
-                  className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 ${
+                  key={item.id}
+                  className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-6 transition-all duration-300 ${
                     isUnlocked 
                       ? 'border-[var(--c-border)] bg-[var(--c-surface)] hover:border-[var(--c-primary)]/50 hover:shadow-lg' 
-                      : 'border-[var(--c-border)]/50 bg-[var(--c-surface)]/30 opacity-80'
+                      : 'border-[var(--c-border)]/40 bg-[var(--c-surface-soft)]/20 opacity-70'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-start justify-between">
                     <div 
-                      className={`flex h-14 w-14 items-center justify-center rounded-xl ${
-                        isUnlocked ? 'bg-[var(--c-surface-soft)]' : 'bg-[var(--c-surface)]'
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${
+                        isUnlocked ? 'bg-[var(--c-surface-soft)] shadow-inner' : 'bg-[var(--c-surface-soft)]/40'
                       }`}
-                      style={{ 
-                        border: isUnlocked ? `1px solid ${achievement.color}40` : '1px solid var(--c-border)',
-                        boxShadow: isUnlocked ? `0 0 15px ${achievement.color}15` : 'none'
-                      }}
+                      style={{ border: `1px solid ${isUnlocked ? item.color + '40' : 'var(--c-border)'}` }}
                     >
                       {isUnlocked ? (
-                        <Icon size={28} color={achievement.color} />
+                        <Icon size={24} color={item.color} />
                       ) : (
-                        <Lock size={24} className="text-[var(--c-muted)]" />
+                        <Lock size={20} className="text-[var(--c-muted)]" />
                       )}
                     </div>
                     
                     <span 
-                      className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-1 rounded-full ${
-                        isUnlocked ? 'bg-[var(--c-surface-soft)] text-[var(--c-text)]' : 'bg-transparent text-[var(--c-muted)] border border-[var(--c-border)]'
-                      }`}
+                      className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                      style={{ 
+                        color: isUnlocked ? item.color : 'var(--c-muted)',
+                        backgroundColor: isUnlocked ? `${item.color}15` : 'transparent',
+                        border: `1px solid ${isUnlocked ? item.color + '30' : 'var(--c-border)'}`
+                      }}
                     >
-                      {achievement.category}
+                      {item.rarity}
                     </span>
                   </div>
-                  
-                  <div>
-                    <h4 className={`font-semibold text-lg ${isUnlocked ? 'text-[var(--c-text)]' : 'text-[var(--c-muted)]'}`}>
-                      {achievement.title}
+
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold text-[var(--c-text)]">
+                      {item.title}
                     </h4>
-                    <p className={`mt-2 text-sm leading-snug ${isUnlocked ? 'text-[var(--c-muted)]' : 'text-[var(--c-muted)]/70'}`}>
-                      {achievement.description}
+                    <p className="mt-1.5 text-xs text-[var(--c-muted)] leading-relaxed">
+                      {item.description}
                     </p>
                   </div>
-                  
-                  <div className="mt-auto pt-6">
+
+                  <div className="mt-6 flex items-center justify-between border-t border-[var(--c-border)]/40 pt-4 text-xs">
+                    <span className="text-[var(--c-muted)]" style={fontMono}>
+                      {item.progress}
+                    </span>
                     {isUnlocked ? (
-                      <p className="text-xs text-[var(--c-muted)] flex items-center gap-1.5" style={fontMono}>
-                        <CheckCircle2 size={12} className="text-[var(--c-primary)]" />
-                        Unlocked {achievement.unlockedAt}
-                      </p>
+                      <span className="flex items-center gap-1 font-semibold text-[var(--c-primary)]">
+                        <CheckCircle2 size={14} />
+                        {item.unlockedAt}
+                      </span>
                     ) : (
-                      <div className="h-1.5 w-full bg-[var(--c-border)]/50 rounded-full overflow-hidden">
-                        {/* Fake progress for locked items for UI polish */}
-                        <div 
-                          className="h-full bg-[var(--c-muted)]/30 rounded-full" 
-                          style={{ width: `${Math.random() * 60}%` }} 
-                        />
-                      </div>
+                      <span className="flex items-center gap-1 text-[var(--c-muted)]">
+                        <Clock size={14} />
+                        Locked
+                      </span>
                     )}
                   </div>
                 </div>
