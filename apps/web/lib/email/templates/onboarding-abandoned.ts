@@ -3,123 +3,208 @@ export interface OnboardingAbandonedEmailProps {
   resumeUrl?: string;
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+export const escapeHtml = (value: unknown): string =>
+  String(value ?? "").replace(/[&<>"']/g, (char) => HTML_ENTITIES[char] ?? char);
+
+function safeUrl(value?: string, fallback = "https://compoundio.vercel.app/onboarding"): string {
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) ? escapeHtml(url.toString()) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Generates the full-width Abandoned Onboarding recovery email for Habitly.
+ * Designed to match the dark aesthetic (#151c17), full-width responsive layout,
+ * and typography of the onboarding complete founder welcome email.
+ */
 export function getOnboardingAbandonedEmailHtml({
   name,
-  resumeUrl = "http://localhost:3001/onboarding",
+  resumeUrl,
 }: OnboardingAbandonedEmailProps): string {
-  const displayName = name ? name.trim().split(" ")[0] : "Architect";
+  const rawFirstName = name?.trim().split(/\s+/)[0] || "Friend";
+  const safeFirstName = escapeHtml(rawFirstName);
+  const resumeHref = safeUrl(resumeUrl);
+
+  const publicAssetBase =
+    process.env.APP_PUBLIC_URL ||
+    (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")
+      ? process.env.NEXTAUTH_URL
+      : "https://compoundio.vercel.app");
+
+  const logoMarkUrl = `${publicAssetBase}/habitly-mark.png`;
+  const logoWordmarkUrl = `${publicAssetBase}/habitly-wordmark.png`;
 
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Don't leave your new streak behind!</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Don't leave your new streak behind, ${safeFirstName}</title>
   <style>
-    @media (prefers-color-scheme: dark) {
-      .outer-canvas { background-color: #08090d !important; }
-      .main-card { background-color: #0f121a !important; border-color: #1f2533 !important; }
-      .headline-dark { color: #f8fafc !important; }
-      .subtext-dark { color: #94a3b8 !important; }
-      .card-footer { background-color: #0c0e14 !important; border-top-color: #1a1e29 !important; }
+    body, html { width:100% !important; min-width:100% !important; margin:0 !important; padding:0 !important; }
+    table { border-collapse:collapse; }
+    img { border:0; outline:none; text-decoration:none; }
+    a { text-decoration:none; }
+    .w-full { width:100% !important; min-width:100% !important; }
+    @media only screen and (max-width:640px) {
+      .email-pad { padding-left:20px !important; padding-right:20px !important; }
+      .hero-heading { font-size:28px !important; line-height:36px !important; }
+      .letter-copy { font-size:14px !important; line-height:25px !important; }
+      .cta-button { display:block !important; width:100% !important; text-align:center !important; }
+      .brand-wordmark { max-width:100px !important; }
+    }
+    @media (prefers-color-scheme:dark) {
+      .dark-text { color:#eff7ef !important; }
+      .body-copy { color:#c1cec3 !important; }
+      .subtle-copy { color:#9eada1 !important; }
+      .soft-rule { border-color:#2b392e !important; }
+      .email-footer { background-color:#111813 !important; border-color:#29352c !important; }
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f6f8fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="outer-canvas" style="background-color: #f6f8fa; padding: 36px 12px;">
+<body bgcolor="#151c17" class="w-full" style="margin:0;padding:0;width:100% !important;min-width:100%;background-color:#151c17;font-family:Arial,Helvetica,sans-serif;color:#eff7ef;-webkit-font-smoothing:antialiased;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+    You're 45 seconds away from launching your Day 1 streak. Your customized habits are saved and waiting.
+  </div>
+
+  <!-- Full-Width Container (Occupies the Whole Space) -->
+  <table role="presentation" width="100%" class="w-full" cellpadding="0" cellspacing="0" border="0" bgcolor="#151c17" style="width:100% !important;min-width:100%;margin:0;padding:0;background-color:#151c17;">
+    
+    <!-- Header Row (Spans Full Width) -->
     <tr>
-      <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="main-card" style="max-width: 600px; background-color: #ffffff; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.06);">
-          
-          <!-- Amber Accent Bar -->
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:28px 48px 20px 48px;border-bottom:1px solid #29352c;background-color:#151c17;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
           <tr>
-            <td height="5" style="background: linear-gradient(90deg, #f59e0b 0%, #a8fe43 100%);"></td>
-          </tr>
-
-          <!-- Header -->
-          <tr>
-            <td style="padding: 28px 36px 18px 36px;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+            <td valign="middle" align="left">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td valign="middle">
-                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td width="34" height="34" style="background-color: #0c0d11; border-radius: 9px; text-align: center; vertical-align: middle; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-                          <div style="font-size: 18px; line-height: 1; color: #a8fe43; font-weight: 900; transform: translateY(-1px);">&#9670;</div>
-                        </td>
-                        <td style="padding-left: 12px;" valign="middle">
-                          <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.4px; color: #0c0d11; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">HABITLY</span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td valign="middle" align="center" style="line-height:0;">
+                    <img src="${logoMarkUrl}" alt="Habitly" width="22" height="22" style="display:block;width:22px;height:22px;border:0;outline:none;" />
                   </td>
-                  <td align="right" valign="middle">
-                    <span style="display: inline-block; background-color: #fefce8; color: #b45309; border: 1px solid #fde68a; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; letter-spacing: 0.3px; text-transform: uppercase;">
-                      &#9679; UNFINISHED SETUP
-                    </span>
+                  <td valign="middle" style="padding-left:9px;line-height:0;">
+                    <img class="brand-wordmark" src="${logoWordmarkUrl}" alt="Habitly" height="17" style="display:block;width:auto;max-width:112px;height:17px;border:0;outline:none;" />
                   </td>
                 </tr>
               </table>
             </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding: 0 36px 32px 36px;">
-              <h1 class="headline-dark" style="font-size: 25px; font-weight: 700; color: #0c0d11; margin: 8px 0 10px 0; letter-spacing: -0.6px; line-height: 1.25; font-family: Georgia, 'Times New Roman', serif;">
-                Don&rsquo;t leave your new streak behind, ${displayName}! 🔥
-              </h1>
-              <p class="subtext-dark" style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 22px 0;">
-                You started calibrating your personal compounding routine on Habitly, but paused before locking in Day 1. Your customized habits are saved and waiting.
-              </p>
-
-              <!-- Sparks Vault Notice: Obsidian Gamification Card -->
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0c0d11; border-radius: 14px; border: 1px solid #232734; margin-bottom: 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
-                <tr>
-                  <td style="padding: 18px 20px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px;">
-                      🎁 Reserved in your vault
-                    </div>
-                    <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">
-                      +150 Sparks &bull; Free Starter Kit
-                    </div>
-                    <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                      Finish your 45-second setup to claim your welcome sparks and initialize your Day 1 streak tracker.
-                    </div>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA Button -->
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding: 4px 0 16px 0;">
-                    <a href="${resumeUrl}" target="_blank" style="display: inline-block; background: linear-gradient(180deg, #bbf85c 0%, #a8fe43 100%); color: #0c0d11; font-size: 15px; font-weight: 800; text-decoration: none; padding: 15px 38px; border-radius: 9999px; letter-spacing: -0.2px; text-align: center; box-shadow: 0 4px 18px rgba(168, 254, 67, 0.4); border: 1px solid #8be828;">
-                      Resume Setup (Takes 45s) &rarr;
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 14px 0 0 0; text-align: center; font-style: italic;">
-                &ldquo;The secret of getting ahead is getting started.&rdquo; &mdash; Mark Twain
-              </p>
+            <td valign="middle" align="right" class="subtle-copy" style="color:#fbbf24;font-size:10px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;">
+              Unfinished Setup &middot; 45s Remaining
             </td>
           </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td class="card-footer" style="background-color: #f8fafc; padding: 20px 36px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">
-              <span style="font-weight: 600; color: #334155;">Habitly</span> &bull; Daily Micro-Habit Compounding System<br>
-              <span style="font-size: 11px; color: #94a3b8;">You received this because an onboarding setup was initiated with this email.</span>
-            </td>
-          </tr>
-
         </table>
       </td>
     </tr>
+
+    <!-- Hero & Body Content (Spans Full Width) -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:32px 48px 8px 48px;background-color:#151c17;">
+        <div style="margin:0 0 13px;color:#f59e0b;font-size:10px;line-height:15px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">
+          Your streak is waiting
+        </div>
+        <h1 class="hero-heading dark-text" style="margin:0 0 19px;color:#eff7ef;font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:44px;font-weight:700;letter-spacing:-.8px;">
+          Don&rsquo;t leave your new streak behind, ${safeFirstName}.
+        </h1>
+
+        <div class="letter-copy body-copy" style="color:#c1cec3;font-size:15px;line-height:27px;">
+          <p style="margin:0 0 17px;">You started calibrating your personal compounding routine on Habitly, but paused right before locking in Day 1.</p>
+          <p style="margin:0 0 17px;">Your chosen habits and preferences have been safely preserved on this device. You&rsquo;re just 45 seconds away from initializing your daily streak tracker and locking in Day 1.</p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- What Unlocks in Day 1 -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:14px 48px 4px 48px;background-color:#151c17;">
+        <div class="soft-rule" style="padding-top:18px;border-top:1px solid #2b392e;">
+          <div class="subtle-copy" style="margin:0 0 10px;color:#9eada1;font-size:10px;line-height:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+            What you&rsquo;ll unlock in Day 1
+          </div>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 0;">
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#a8fe43;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 10px;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Your Daily Habit Dashboard:</strong> Micro-habits pre-configured for your schedule and ready to check in.
+              </td>
+            </tr>
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#a8fe43;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 10px;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Streak Shields &amp; Night Owl Cutoff:</strong> Protect your momentum so late nights never break your chain.
+              </td>
+            </tr>
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#a8fe43;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 0;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Visual Progress &amp; Compounding Growth:</strong> Track daily consistency with clear streaks, analytics, and milestones.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Closing & Founder Signature -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:22px 48px 0 48px;background-color:#151c17;">
+        <p class="letter-copy body-copy" style="margin:0 0 17px;color:#c1cec3;font-size:15px;line-height:27px;">
+          Take 45 seconds to finish what you started &mdash; your future self will thank you. I&rsquo;m rooting for you.
+        </p>
+        <p class="letter-copy body-copy" style="margin:0 0 3px;color:#c1cec3;font-size:14px;line-height:24px;">Warmly,</p>
+        <p class="dark-text" style="margin:0;color:#eff7ef;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:29px;font-weight:700;">Anurag Das</p>
+        <p class="subtle-copy" style="margin:1px 0 0;color:#829086;font-size:12px;line-height:18px;">Founder, Habitly</p>
+      </td>
+    </tr>
+
+    <!-- CTA Button & P.S. -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:24px 48px 28px 48px;background-color:#151c17;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="left" style="padding:0;">
+              <a href="${resumeHref}" target="_blank" rel="noopener noreferrer" class="cta-button" style="display:inline-block;padding:13px 23px;border-radius:7px;background:#a8fe43;color:#14200e;font-size:13px;line-height:18px;font-weight:700;text-decoration:none;text-align:center;">
+                Resume Setup (Takes 45s)&nbsp; &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p class="subtle-copy" style="margin:18px 0 0;color:#829086;font-size:12px;line-height:20px;">
+          P.S. If you ran into any friction or have a question, hit reply &mdash; I read every message personally.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Full-Width Footer -->
+    <tr>
+      <td class="email-footer" align="center" bgcolor="#111813" style="width:100%;padding:24px;background-color:#111813;border-top:1px solid #29352c;">
+        <p style="margin:0 0 5px;color:#8b978d;font-size:10px;line-height:15px;font-weight:700;letter-spacing:.6px;">HABITLY &middot; BUILD WHAT MOVES YOU FORWARD</p>
+        <p class="subtle-copy" style="margin:0 0 8px;color:#6d7a6e;font-size:10px;line-height:16px;">You&rsquo;re receiving this because you started onboarding on Habitly.<br>Manage your email preferences in Account Settings.</p>
+        <p class="subtle-copy" style="margin:0;color:#6d7a6e;font-size:10px;line-height:16px;">Small actions, repeated with intention, can change a lot.</p>
+      </td>
+    </tr>
+
   </table>
+
 </body>
 </html>
   `.trim();

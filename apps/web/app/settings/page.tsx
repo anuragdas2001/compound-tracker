@@ -40,6 +40,15 @@ export default function SettingsPage() {
   const [dayCutoffHour, setDayCutoffHour] = useState<number>(3);
   const [savingCutoff, setSavingCutoff] = useState(false);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/login', redirect: false });
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+    window.location.href = '/login';
+  };
+
   useEffect(() => {
     fetch('/api/user/preferences')
       .then(res => res.json())
@@ -197,7 +206,10 @@ export default function SettingsPage() {
             })}
 
             <div className="mt-8 pt-6 border-t border-[var(--c-border)]/40">
-              <button className="group flex items-center justify-between p-4 rounded-2xl border border-transparent hover:border-[#EF4444]/30 bg-transparent hover:bg-[#EF4444]/5 transition-all duration-300 w-full">
+              <button 
+                onClick={handleSignOut}
+                className="group flex items-center justify-between p-4 rounded-2xl border border-transparent hover:border-[#EF4444]/30 bg-transparent hover:bg-[#EF4444]/5 transition-all duration-300 w-full cursor-pointer"
+              >
                 <div className="flex items-center gap-4 text-[#EF4444]/80 group-hover:text-[#EF4444]">
                   <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-transparent border border-[#EF4444]/20 group-hover:bg-[#EF4444]/10 transition-colors duration-300">
                     <LogOut size={18} />
@@ -463,8 +475,8 @@ export default function SettingsPage() {
 
                   <div className="pt-2 flex justify-end">
                     <button
-                      onClick={() => signOut({ callbackUrl: '/login' })}
-                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 font-bold transition-all duration-300"
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 font-bold transition-all duration-300 cursor-pointer"
                     >
                       <LogOut size={16} /> Sign Out
                     </button>

@@ -266,6 +266,11 @@ export default function OnboardingPage() {
   /* ------------------------------ Guard: Prevent Re-entry ------------------------------ */
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
+
     if (status === 'authenticated') {
       const hasCompletedOnboarding = Boolean(session?.user?.hasCompletedOnboarding);
       console.log("hasCompletedOnboarding",hasCompletedOnboarding)

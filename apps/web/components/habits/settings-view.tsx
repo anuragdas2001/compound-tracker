@@ -19,6 +19,15 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
   const userName = session?.user?.name || "Habit Explorer";
   const userEmail = session?.user?.email || "explorer@compound.app";
 
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: "/login", redirect: false });
+    } catch (err) {
+      console.error("Sign out failed:", err);
+    }
+    window.location.href = "/login";
+  };
+
   const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(habits, null, 2));
     const downloadAnchor = document.createElement("a");
@@ -140,8 +149,8 @@ export function SettingsView({ habits, deleteHabit }: SettingsViewProps) {
       <section className="flex justify-center pt-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-2 text-sm transition hover:text-red-400"
+          onClick={handleSignOut}
+          className="flex items-center gap-2 text-sm transition hover:text-red-400 cursor-pointer"
           style={{ color: C.muted }}
         >
           <LogOut className="h-4 w-4" />

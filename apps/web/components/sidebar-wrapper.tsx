@@ -15,7 +15,7 @@ const PlayerStatusBar = dynamic(
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -36,10 +36,21 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/(auth)");
 
   useEffect(() => {
-    if (!isPublicRoute && status === "unauthenticated") {
+    if (isPublicRoute) return;
+
+    if (status === "unauthenticated") {
       router.push("/login");
+      return;
     }
-  }, [isPublicRoute, status, router]);
+
+    if (status === "authenticated" && session?.user) {
+      const isJustOnboarded = typeof window !== 'undefined' && window.location.search.includes('onboarded=true');
+      const hasCompletedOnboarding = Boolean(session.user.hasCompletedOnboarding) || isJustOnboarded;
+      if (!hasCompletedOnboarding) {
+        router.replace("/onboarding");
+      }
+    }
+  }, [isPublicRoute, status, session, router]);
 
   const handleSetCollapsed = (val: boolean) => {
     setIsCollapsed(val);
@@ -50,6 +61,17 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
 
   if (isPublicRoute) {
     return <>{children}</>;
+  }
+
+  const isJustOnboarded = typeof window !== 'undefined' && window.location.search.includes('onboarded=true');
+  const isPendingOnboarding = status === "authenticated" && session?.user && !session.user.hasCompletedOnboarding && !isJustOnboarded;
+
+  if (status === "loading" || status === "unauthenticated" || isPendingOnboarding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--c-bg)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--c-primary)] border-t-transparent" />
+      </div>
+    );
   }
 
   return (

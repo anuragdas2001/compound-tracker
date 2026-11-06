@@ -106,7 +106,7 @@ export async function sendWelcomeEmail({
   const html = getWelcomeEmailHtml({ name, verificationUrl });
   return sendEmail({
     to: email,
-    subject: "Welcome to Habitly — Your compounding journey starts here 🚀",
+    subject: "Welcome to Habitly — Your compounding journey starts here",
     html,
   });
 }
@@ -156,7 +156,7 @@ export async function sendOnboardingAbandonedEmail({
   const html = getOnboardingAbandonedEmailHtml({ name, resumeUrl });
   return sendEmail({
     to: email,
-    subject: "🔥 Don't leave your new streak behind!",
+    subject: "Don't leave your new streak behind",
     html,
   });
 }

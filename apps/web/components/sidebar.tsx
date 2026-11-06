@@ -69,6 +69,15 @@ export function AppSidebar({
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/login', redirect: false });
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+    window.location.href = '/login';
+  };
+
   // Close mobile menu when pathname changes
   useEffect(() => {
     setMobileOpen(false);
@@ -210,20 +219,20 @@ export function AppSidebar({
         )}
 
         {/* BOTTOM USER PROFILE */}
-        {/* <div
+        <div
           className={`px-3 py-4 transition-all border-t border-[var(--c-border)]/50 bg-gradient-to-t from-[var(--c-surface)]/40 to-transparent ${isCollapsed ? 'flex flex-col items-center gap-3' : ''}`}
         >
           {isCollapsed ? (
             <>
               <div
                 className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--c-surface-soft)] border border-[var(--c-border)] text-[var(--c-primary)] shadow-sm hover:border-[var(--c-primary)]/40 transition-colors"
-                title="Explorer (Compound Plan)"
+                title="Explorer (Habitly Plan)"
               >
                 <User size={20} />
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--c-muted)] hover:bg-[#EF4444]/10 hover:text-[#EF4444] hover:border hover:border-[#EF4444]/20 transition-all"
+                onClick={handleSignOut}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--c-muted)] hover:bg-[#EF4444]/10 hover:text-[#EF4444] hover:border hover:border-[#EF4444]/20 transition-all cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut size={18} />
@@ -241,14 +250,16 @@ export function AppSidebar({
                       {session?.user?.name || 'Explorer'}
                     </p>
                     {(session?.user as any)?.emailVerified ? (
-                      <BadgeCheck size={14} className="text-blue-500 flex-none" title="Verified" />
+                      <span title="Verified" className="inline-flex items-center">
+                        <BadgeCheck size={14} className="text-blue-500 flex-none" />
+                      </span>
                     ) : null}
                   </div>
                   {!(session?.user as any)?.emailVerified && (
                     <button 
                       onClick={handleVerify} 
                       disabled={isVerifying}
-                      className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 truncate tracking-wider uppercase mt-0.5 underline transition-colors block"
+                      className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 truncate tracking-wider uppercase mt-0.5 underline transition-colors block cursor-pointer"
                     >
                       {isVerifying ? 'Verifying...' : 'Verify Email'}
                     </button>
@@ -257,15 +268,15 @@ export function AppSidebar({
               </div>
 
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="p-2 text-[var(--c-muted)] hover:text-[#EF4444] transition-all rounded-xl hover:bg-[#EF4444]/10"
+                onClick={handleSignOut}
+                className="p-2 text-[var(--c-muted)] hover:text-[#EF4444] transition-all rounded-xl hover:bg-[#EF4444]/10 cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut size={18} />
               </button>
             </div>
           )}
-        </div> */}
+        </div>
       </aside>
     </>
   );

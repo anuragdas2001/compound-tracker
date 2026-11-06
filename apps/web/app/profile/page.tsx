@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useState, useMemo } from 'react';
 import { useGamificationSummary } from '@repo/query/gamification/useGamificationSummary';
 import { useHabits } from '@repo/query/habits/useHabits';
@@ -25,7 +25,8 @@ import {
   Award,
   ChevronRight,
   TrendingUp,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -65,6 +66,15 @@ export default function ProfilePage() {
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/login', redirect: false });
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+    window.location.href = '/login';
   };
 
   const name = session?.user?.name || session?.user?.email?.split('@')[0] || 'Habit Explorer';
@@ -312,12 +322,12 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 items-center">
+                <div className="flex gap-3 items-center flex-wrap sm:flex-nowrap">
                   {!isVerified && (
                     <button 
                       onClick={handleVerify}
                       disabled={isVerifying}
-                      className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-orange-500/10 border border-orange-500/50 text-orange-500 shadow-sm hover:border-orange-500 hover:bg-orange-500/20 transition-all duration-300 font-semibold w-full sm:w-auto shrink-0"
+                      className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-orange-500/10 border border-orange-500/50 text-orange-500 shadow-sm hover:border-orange-500 hover:bg-orange-500/20 transition-all duration-300 font-semibold w-full sm:w-auto shrink-0 cursor-pointer"
                     >
                       {isVerifying ? 'Verifying...' : 'Verify Email'}
                     </button>
@@ -326,6 +336,14 @@ export default function ProfilePage() {
                     <Edit3 size={16} className="group-hover:rotate-12 transition-transform" />
                     Settings
                   </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 font-semibold cursor-pointer w-full sm:w-auto shrink-0"
+                    title="Sign Out"
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
                 </div>
               </div>
 

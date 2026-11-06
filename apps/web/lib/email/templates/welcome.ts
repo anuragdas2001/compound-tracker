@@ -3,162 +3,205 @@ export interface WelcomeEmailProps {
   verificationUrl?: string;
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+export const escapeHtml = (value: unknown): string =>
+  String(value ?? "").replace(/[&<>"']/g, (char) => HTML_ENTITIES[char] ?? char);
+
+function safeUrl(value?: string, fallback = "https://compoundio.vercel.app/dashboard"): string {
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) ? escapeHtml(url.toString()) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Generates the full-width Welcome email for Habitly.
+ * Designed to match the dark aesthetic (#151c17), full-width responsive layout,
+ * and typography of the onboarding complete founder welcome email.
+ */
 export function getWelcomeEmailHtml({ name, verificationUrl }: WelcomeEmailProps): string {
-  const displayName = name ? name.trim().split(" ")[0] : "Architect";
-  const ctaUrl = verificationUrl || "http://localhost:3001/dashboard";
+  const rawFirstName = name?.trim().split(/\s+/)[0] || "Friend";
+  const safeFirstName = escapeHtml(rawFirstName);
+  const ctaHref = safeUrl(verificationUrl);
+
+  const publicAssetBase =
+    process.env.APP_PUBLIC_URL ||
+    (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")
+      ? process.env.NEXTAUTH_URL
+      : "https://compoundio.vercel.app");
+
+  const logoMarkUrl = `${publicAssetBase}/habitly-mark.png`;
+  const logoWordmarkUrl = `${publicAssetBase}/habitly-wordmark.png`;
 
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Habitly</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Welcome to Habitly, ${safeFirstName}</title>
   <style>
-    @media (prefers-color-scheme: dark) {
-      .outer-canvas { background-color: #08090d !important; }
-      .main-card { background-color: #0f121a !important; border-color: #1f2533 !important; }
-      .headline-dark { color: #f8fafc !important; }
-      .subtext-dark { color: #94a3b8 !important; }
-      .rules-divider { border-top-color: #1f2533 !important; }
-      .rule-title { color: #f1f5f9 !important; }
-      .card-footer { background-color: #0c0e14 !important; border-top-color: #1a1e29 !important; }
+    body, html { width:100% !important; min-width:100% !important; margin:0 !important; padding:0 !important; }
+    table { border-collapse:collapse; }
+    img { border:0; outline:none; text-decoration:none; }
+    a { text-decoration:none; }
+    .w-full { width:100% !important; min-width:100% !important; }
+    @media only screen and (max-width:640px) {
+      .email-pad { padding-left:20px !important; padding-right:20px !important; }
+      .hero-heading { font-size:28px !important; line-height:36px !important; }
+      .letter-copy { font-size:14px !important; line-height:25px !important; }
+      .cta-button { display:block !important; width:100% !important; text-align:center !important; }
+      .brand-wordmark { max-width:100px !important; }
+    }
+    @media (prefers-color-scheme:dark) {
+      .dark-text { color:#eff7ef !important; }
+      .body-copy { color:#c1cec3 !important; }
+      .subtle-copy { color:#9eada1 !important; }
+      .soft-rule { border-color:#2b392e !important; }
+      .email-footer { background-color:#111813 !important; border-color:#29352c !important; }
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f6f8fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="outer-canvas" style="background-color: #f6f8fa; padding: 36px 12px;">
+<body bgcolor="#151c17" class="w-full" style="margin:0;padding:0;width:100% !important;min-width:100%;background-color:#151c17;font-family:Arial,Helvetica,sans-serif;color:#eff7ef;-webkit-font-smoothing:antialiased;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+    Welcome to Habitly. Your compounding journey starts today.
+  </div>
+
+  <!-- Full-Width Container (Occupies the Whole Space) -->
+  <table role="presentation" width="100%" class="w-full" cellpadding="0" cellspacing="0" border="0" bgcolor="#151c17" style="width:100% !important;min-width:100%;margin:0;padding:0;background-color:#151c17;">
+    
+    <!-- Header Row (Spans Full Width) -->
     <tr>
-      <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="main-card" style="max-width: 600px; background-color: #ffffff; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.06);">
-          
-          <!-- Top Accent Bar -->
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:28px 48px 20px 48px;border-bottom:1px solid #29352c;background-color:#151c17;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
           <tr>
-            <td height="5" style="background: linear-gradient(90deg, #a8fe43 0%, #22c55e 50%, #10b981 100%);"></td>
-          </tr>
-
-          <!-- Header -->
-          <tr>
-            <td style="padding: 28px 36px 18px 36px;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+            <td valign="middle" align="left">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td valign="middle">
-                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td width="34" height="34" style="background-color: #0c0d11; border-radius: 9px; text-align: center; vertical-align: middle; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-                          <div style="font-size: 18px; line-height: 1; color: #a8fe43; font-weight: 900; transform: translateY(-1px);">&#9670;</div>
-                        </td>
-                        <td style="padding-left: 12px;" valign="middle">
-                          <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.4px; color: #0c0d11; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">HABITLY</span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td valign="middle" align="center" style="line-height:0;">
+                    <img src="${logoMarkUrl}" alt="Habitly" width="22" height="22" style="display:block;width:22px;height:22px;border:0;outline:none;" />
                   </td>
-                  <td align="right" valign="middle">
-                    <span style="display: inline-block; background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; letter-spacing: 0.3px; text-transform: uppercase;">
-                      &#9679; WELCOME
-                    </span>
+                  <td valign="middle" style="padding-left:9px;line-height:0;">
+                    <img class="brand-wordmark" src="${logoWordmarkUrl}" alt="Habitly" height="17" style="display:block;width:auto;max-width:112px;height:17px;border:0;outline:none;" />
                   </td>
                 </tr>
               </table>
             </td>
-          </tr>
-
-          <!-- Hero Content -->
-          <tr>
-            <td style="padding: 0 36px 32px 36px;">
-              <h1 class="headline-dark" style="font-size: 25px; font-weight: 700; color: #0c0d11; margin: 8px 0 10px 0; letter-spacing: -0.6px; line-height: 1.25; font-family: Georgia, 'Times New Roman', serif;">
-                Welcome aboard, ${displayName}! 👋
-              </h1>
-              <p class="subtext-dark" style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 22px 0;">
-                You just took the first step toward continuous daily compounding. Big achievements aren&rsquo;t made in a day &mdash; they are compounded 1% every day.
-              </p>
-
-              <!-- Sparks Welcome Reward Card -->
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0c0d11; border-radius: 14px; border: 1px solid #232734; margin-bottom: 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
-                <tr>
-                  <td style="padding: 18px 20px;">
-                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td>
-                          <div style="font-size: 11px; font-weight: 700; color: #a8fe43; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px;">
-                            &#9889; Starter Kit Unlocked
-                          </div>
-                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">
-                            +150 Sparks Bonus Credited
-                          </div>
-                          <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                            Your starter kit is ready in your vault for Streak Freezes and XP Boosts.
-                          </div>
-                        </td>
-                        <td align="right" valign="middle" style="padding-left: 16px;">
-                          <div style="display: inline-block; background-color: rgba(168, 254, 67, 0.15); border: 1px solid rgba(168, 254, 67, 0.35); color: #a8fe43; font-size: 13px; font-weight: 800; padding: 6px 14px; border-radius: 8px; white-space: nowrap;">
-                            +150 ⚡
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Action CTA Button -->
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding: 4px 0 16px 0;">
-                    <a href="${ctaUrl}" target="_blank" style="display: inline-block; background: linear-gradient(180deg, #bbf85c 0%, #a8fe43 100%); color: #0c0d11; font-size: 15px; font-weight: 800; text-decoration: none; padding: 15px 36px; border-radius: 9999px; letter-spacing: -0.2px; text-align: center; box-shadow: 0 4px 18px rgba(168, 254, 67, 0.4); border: 1px solid #8be828;">
-                      Verify Email &amp; Launch Dashboard &rarr;
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- 3 Core Principles -->
-              <div class="rules-divider" style="border-top: 1px solid #e2e8f0; padding-top: 22px; margin-top: 12px;">
-                <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px;">
-                  3 Rules of Compounding
-                </div>
-                
-                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                  <tr>
-                    <td style="padding-bottom: 12px;">
-                      <span style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background-color: #ecfccb; color: #3f6212; font-weight: 800; font-size: 11px; text-align: center; line-height: 22px; margin-right: 8px; vertical-align: middle;">1</span>
-                      <strong class="rule-title" style="color: #0f172a; font-size: 13px;">Start Tiny:</strong>
-                      <span style="color: #64748b; font-size: 13px;"> Keep habits small enough that you can&rsquo;t say no (the 2-minute rule).</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding-bottom: 12px;">
-                      <span style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background-color: #ecfccb; color: #3f6212; font-weight: 800; font-size: 11px; text-align: center; line-height: 22px; margin-right: 8px; vertical-align: middle;">2</span>
-                      <strong class="rule-title" style="color: #0f172a; font-size: 13px;">Never Miss Twice:</strong>
-                      <span style="color: #64748b; font-size: 13px;"> Bad days happen. Missing once is an accident; missing twice is a new habit.</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding-bottom: 6px;">
-                      <span style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background-color: #ecfccb; color: #3f6212; font-weight: 800; font-size: 11px; text-align: center; line-height: 22px; margin-right: 8px; vertical-align: middle;">3</span>
-                      <strong class="rule-title" style="color: #0f172a; font-size: 13px;">Lock the Streak:</strong>
-                      <span style="color: #64748b; font-size: 13px;"> Every consecutive check-in multiplies your momentum and gamified XP.</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-
+            <td valign="middle" align="right" class="subtle-copy" style="color:#9eada1;font-size:10px;letter-spacing:.7px;text-transform:uppercase;">
+              Welcome &middot; Day One
             </td>
           </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td class="card-footer" style="background-color: #f8fafc; padding: 20px 36px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">
-              <span style="font-weight: 600; color: #334155;">Habitly</span> &bull; Daily Micro-Habit Compounding System<br>
-              <span style="font-size: 11px; color: #94a3b8;">If you didn&rsquo;t create this account, you can safely ignore this email.</span>
-            </td>
-          </tr>
-
         </table>
       </td>
     </tr>
+
+    <!-- Hero & Welcome Content (Spans Full Width) -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:32px 48px 8px 48px;background-color:#151c17;">
+        <div style="margin:0 0 13px;color:#659b3e;font-size:10px;line-height:15px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">
+          A fresh start begins here
+        </div>
+        <h1 class="hero-heading dark-text" style="margin:0 0 19px;color:#eff7ef;font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:44px;font-weight:700;letter-spacing:-.8px;">
+          Welcome aboard, ${safeFirstName}.
+        </h1>
+
+        <div class="letter-copy body-copy" style="color:#c1cec3;font-size:15px;line-height:27px;">
+          <p style="margin:0 0 17px;">You just took the first step toward continuous daily compounding. Big achievements aren&rsquo;t made in a day &mdash; they are compounded 1% every single day.</p>
+          <p style="margin:0 0 17px;">Whether you&rsquo;re building deep focus, building an unstoppable fitness routine, or breaking patterns that quietly hold you back, Habitly is built to support your daily consistency without guilt or complexity.</p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- The 3 Rules of Compounding -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:14px 48px 4px 48px;background-color:#151c17;">
+        <div class="soft-rule" style="padding-top:18px;border-top:1px solid #2b392e;">
+          <div class="subtle-copy" style="margin:0 0 10px;color:#9eada1;font-size:10px;line-height:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+            The 3 Rules of Daily Compounding
+          </div>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 0;">
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#79bd45;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 10px;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Never break the chain twice:</strong> Miss a day? Life happens. Just never miss two in a row.
+              </td>
+            </tr>
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#79bd45;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 10px;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Make it too small to fail:</strong> Start with micro-habits and let consistency do the heavy lifting.
+              </td>
+            </tr>
+            <tr>
+              <td valign="top" width="18" style="width:18px;padding:7px 0 0 0;">
+                <span style="display:block;width:6px;height:6px;border-radius:50%;background:#79bd45;font-size:0;line-height:0;">&nbsp;</span>
+              </td>
+              <td valign="top" style="padding:3px 0 0;color:#e5eee6;font-size:13px;line-height:21px;">
+                <strong style="color:#eff7ef;">Protect your momentum:</strong> Use Streak Freezes and flexible cutoff times when life gets unpredictable.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Closing & Founder Signature -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:22px 48px 0 48px;background-color:#151c17;">
+        <p class="letter-copy body-copy" style="margin:0 0 17px;color:#c1cec3;font-size:15px;line-height:27px;">
+          Don&rsquo;t worry about being perfect. Just begin, and take it one day at a time. I&rsquo;m rooting for you.
+        </p>
+        <p class="letter-copy body-copy" style="margin:0 0 3px;color:#c1cec3;font-size:14px;line-height:24px;">Warmly,</p>
+        <p class="dark-text" style="margin:0;color:#eff7ef;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:29px;font-weight:700;">Anurag Das</p>
+        <p class="subtle-copy" style="margin:1px 0 0;color:#829086;font-size:12px;line-height:18px;">Founder, Habitly</p>
+      </td>
+    </tr>
+
+    <!-- CTA Button & P.S. -->
+    <tr>
+      <td class="email-pad" bgcolor="#151c17" style="width:100%;padding:24px 48px 28px 48px;background-color:#151c17;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="left" style="padding:0;">
+              <a href="${ctaHref}" target="_blank" rel="noopener noreferrer" class="cta-button" style="display:inline-block;padding:13px 23px;border-radius:7px;background:#a8fe43;color:#14200e;font-size:13px;line-height:18px;font-weight:700;text-decoration:none;text-align:center;">
+                Verify Email &amp; Launch Dashboard&nbsp; &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p class="subtle-copy" style="margin:18px 0 0;color:#829086;font-size:12px;line-height:20px;">
+          P.S. Have a question, some feedback, or an idea that could make Habitly better? Just reply to this email. I read every message.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Full-Width Footer -->
+    <tr>
+      <td class="email-footer" align="center" bgcolor="#111813" style="width:100%;padding:24px;background-color:#111813;border-top:1px solid #29352c;">
+        <p style="margin:0 0 5px;color:#8b978d;font-size:10px;line-height:15px;font-weight:700;letter-spacing:.6px;">HABITLY &middot; BUILD WHAT MOVES YOU FORWARD</p>
+        <p class="subtle-copy" style="margin:0 0 8px;color:#6d7a6e;font-size:10px;line-height:16px;">You&rsquo;re receiving this because you created an account on Habitly.<br>Manage your email preferences in Account Settings.</p>
+        <p class="subtle-copy" style="margin:0;color:#6d7a6e;font-size:10px;line-height:16px;">Small actions, repeated with intention, can change a lot.</p>
+      </td>
+    </tr>
+
   </table>
+
 </body>
 </html>
   `.trim();

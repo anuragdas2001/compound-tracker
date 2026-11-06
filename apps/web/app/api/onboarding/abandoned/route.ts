@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       include: { habits: true },
     });
 
-    if (user && user.habits.length > 0) {
+    if (user && (user.hasCompletedOnboarding || user.habits.length > 0)) {
       return NextResponse.json({
         skipped: true,
         message: "User has already completed onboarding.",

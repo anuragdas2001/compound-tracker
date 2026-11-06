@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@repo/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { sendWelcomeEmail } from "@/lib/email/resend";
 
 export async function POST(req: Request) {
   try {
@@ -56,21 +55,6 @@ export async function POST(req: Request) {
         expires,
       },
     });
-
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001";
-    const verificationUrl = `${baseUrl}/api/auth/verify?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
-
-    // Send Welcome Email with verification link via Resend (or dev console fallback)
-    try {
-      await sendWelcomeEmail({
-        email: normalizedEmail,
-        name: user.name,
-        verificationUrl,
-      });
-    } catch (emailErr) {
-      console.error("Failed to send welcome email:", emailErr);
-      // Non-blocking: registration still succeeds even if email dispatch fails
-    }
 
     return NextResponse.json(
       { message: "User created successfully", userId: user.id },

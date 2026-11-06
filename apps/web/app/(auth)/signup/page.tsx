@@ -2,10 +2,25 @@
 import AuthLayout from "../auth-layout";
 import { useRouter } from 'next/navigation';
 import { SignupForm, type SignupValues } from "@repo/ui/components/auth/signup-form";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useEffect } from "react";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // If already authenticated, redirect to onboarding if incomplete, else dashboard
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const hasCompleted = Boolean(session.user.hasCompletedOnboarding);
+      if (!hasCompleted) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  }, [status, session, router]);
+
   const handleSignup = async (values: SignupValues) => {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
