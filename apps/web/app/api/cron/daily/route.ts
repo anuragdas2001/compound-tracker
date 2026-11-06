@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runStreakWarnings } from "../streak-warnings/route";
-import { runAbandonedOnboarding } from "../abandoned-onboarding/route";
+import { runStreakWarnings, runAbandonedOnboarding } from "@/lib/cron/tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -46,4 +45,3 @@ async function handleDailyCron(req: NextRequest) {
     );
   }
 }
-
