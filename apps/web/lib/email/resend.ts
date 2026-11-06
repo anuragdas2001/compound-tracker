@@ -134,16 +134,13 @@ export async function sendVerificationEmail({
 /**
  * Sends an Onboarding Completion Email
  */
-export async function sendOnboardingCompleteEmail({
-  email,
-  name,
-  habits,
-  dashboardUrl,
-}: OnboardingCompleteEmailProps & { email: string }): Promise<SendEmailResult> {
-  const html = getOnboardingCompleteEmailHtml({ name, habits, dashboardUrl });
+export async function sendOnboardingCompleteEmail(
+  props: OnboardingCompleteEmailProps & { email: string }
+): Promise<SendEmailResult> {
+  const html = getOnboardingCompleteEmailHtml(props);
   return sendEmail({
-    to: email,
-    subject: "⚡ Your Habit Blueprint is Locked & Loaded!",
+    to: props.email,
+    subject: "⚡ Welcome to Habitly — a note from the founder",
     html,
   });
 }

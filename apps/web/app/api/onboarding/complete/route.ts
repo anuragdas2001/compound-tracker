@@ -86,10 +86,14 @@ export async function POST(req: NextRequest) {
       await sendOnboardingCompleteEmail({
         email: user.email!,
         name: user.name,
+        identityTitle: identityGoal,
+        dayCutoffHour: Number(dayCutoffHour) || 0,
         habits: habitsToCreate.map((h: any) => ({
           title: h.title,
           category: h.category,
         })),
+        sparksEarned: 150,
+        xpEarned: 50,
         dashboardUrl: `${baseUrl}/dashboard`,
       });
     } catch (emailErr) {

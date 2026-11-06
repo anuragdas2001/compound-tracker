@@ -194,7 +194,7 @@ model Payment {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   razorpayOrderId   String   @unique
-  razorpayPaymentId String?  @unique
+  razorpayPaymentId String?
   razorpaySignature String?
 
   amount            Int      // In paise or currency unit

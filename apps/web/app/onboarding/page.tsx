@@ -28,7 +28,6 @@ import {
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 
 const DRAFT_KEY = 'habitly_onboarding_draft';
-const COMPLETED_FLAG = 'habitly_onboarding_completed';
 const MAX_HABITS = 3;
 const CUSTOM_PALETTE = ['#a8fe43', '#38bdf8', '#f59e0b', '#f43f5e', '#818cf8', '#10b981'];
 
@@ -228,7 +227,7 @@ function Heading({ title, subtitle }: { title: string; subtitle: string }) {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const reduceMotion = useReducedMotion() ?? false;
 
   const [alreadyOnboarded, setAlreadyOnboarded] = useState(false);
@@ -267,25 +266,11 @@ export default function OnboardingPage() {
   /* ------------------------------ Guard: Prevent Re-entry ------------------------------ */
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(COMPLETED_FLAG) === 'true') {
-        setAlreadyOnboarded(true);
-        router.replace('/dashboard');
-        return;
-      }
-    } catch {
-      // ignore
-    }
-
     if (status === 'authenticated') {
-      const userOnboarded = Boolean((session?.user as Record<string, unknown>)?.hasCompletedOnboarding);
-      if (userOnboarded) {
+      const hasCompletedOnboarding = Boolean(session?.user?.hasCompletedOnboarding);
+      console.log("hasCompletedOnboarding",hasCompletedOnboarding)
+      if (hasCompletedOnboarding) {
         setAlreadyOnboarded(true);
-        try {
-          localStorage.setItem(COMPLETED_FLAG, 'true');
-        } catch {
-          // ignore
-        }
         router.replace('/dashboard');
         return;
       }
@@ -296,11 +281,6 @@ export default function OnboardingPage() {
         .then(data => {
           if (data?.hasCompletedOnboarding) {
             setAlreadyOnboarded(true);
-            try {
-              localStorage.setItem(COMPLETED_FLAG, 'true');
-            } catch {
-              // ignore
-            }
             router.replace('/dashboard');
           }
         })
@@ -487,9 +467,15 @@ export default function OnboardingPage() {
       if (res.ok) {
         try {
           localStorage.removeItem(DRAFT_KEY);
-          localStorage.setItem(COMPLETED_FLAG, 'true');
         } catch {
           // ignore
+        }
+        if (typeof update === 'function') {
+          try {
+            await update();
+          } catch {
+            // ignore
+          }
         }
         setOutcome('success');
         toast.success('🎉 Your compounding routine is live!');

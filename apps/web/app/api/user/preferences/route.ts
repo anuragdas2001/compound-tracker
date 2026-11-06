@@ -18,7 +18,6 @@ export async function GET() {
         dayCutoffHour: true,
         plan: true,
         hasCompletedOnboarding: true,
-        habits: { select: { id: true }, take: 1 },
       },
     });
 
@@ -29,9 +28,7 @@ export async function GET() {
     return NextResponse.json({
       dayCutoffHour: user.dayCutoffHour ?? 0,
       plan: user.plan,
-      hasCompletedOnboarding: Boolean(
-        user.hasCompletedOnboarding || (user.habits && user.habits.length > 0)
-      ),
+      hasCompletedOnboarding: Boolean(user.hasCompletedOnboarding),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Internal server error';

@@ -74,10 +74,13 @@ export async function POST(req: NextRequest) {
         result = await sendOnboardingCompleteEmail({
           email: to,
           name: data.name || "Explorer",
+          identityTitle: data.identityTitle || "Mindful & Balanced",
+          dayCutoffHour: data.dayCutoffHour ?? 4,
+          sparksEarned: data.sparksEarned ?? 150,
+          xpEarned: data.xpEarned ?? 50,
           habits: data.habits || [
-            { title: "Morning Deep Work (45m)", category: "Focus" },
-            { title: "Hydrate 2L Daily", category: "Health" },
-            { title: "Evening Reading (15m)", category: "Mindset" },
+            { title: "10-min Morning Meditation", category: "Mindfulness" },
+            { title: "Digital Sunset (No Screens After 10 PM)", category: "Sleep" },
           ],
           dashboardUrl: `${baseUrl}/dashboard`,
         });
