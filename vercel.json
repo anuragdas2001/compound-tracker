@@ -20,16 +20,12 @@
   },
   "crons": [
     {
-      "path": "/api/cron/streak-warnings",
+      "path": "/api/cron/daily",
       "schedule": "0 20 * * *"
     },
     {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/abandoned-onboarding",
-      "schedule": "0 */6 * * *"
     }
   ],
   "rewrites": [
