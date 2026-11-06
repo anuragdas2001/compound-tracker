@@ -12,4 +12,8 @@ export class UseShieldDto {
   @IsNotEmpty()
   @IsString()
   missedDate!: string;
+
+  @IsOptional()
+  @IsString()
+  itemType?: string;
 }

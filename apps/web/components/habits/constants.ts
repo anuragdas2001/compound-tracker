@@ -1,4 +1,4 @@
-import { Award, BarChart3, Settings, Zap } from "lucide-react";
+import { Archive, Award, BarChart3, Settings, Zap } from "lucide-react";
 
 export const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 export const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
@@ -39,6 +39,7 @@ export const navItems = [
   { label: "Today", icon: Zap, id: "Today" },
   { label: "Insights", icon: BarChart3, id: "Insights" },
   { label: "Store", icon: Award, id: "Store" },
+  { label: "Archived", icon: Archive, id: "Archived" },
   { label: "Settings", icon: Settings, id: "Settings" },
 ] as const;
 

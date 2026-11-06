@@ -1,5 +1,7 @@
 export type HabitLog = {
+  id?: string;
   completedAt: string;
+  value?: number;
 };
 
 export type Habit = {
@@ -17,6 +19,7 @@ export type Habit = {
   unit?: string;
   why?: string;
   mini?: string;
+  archived?: boolean;
 };
 
 export type HabitRow = Habit & {

@@ -3,13 +3,18 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useSparksState } from "../store/gamification";
-import { Bell, User, Sun, Moon, Zap, Shield, Sparkles, X, ChevronRight } from "lucide-react";
+import { Bell, User, Sun, Moon, Zap, Shield, Sparkles, X, ChevronRight, RotateCcw, Calendar, Snowflake, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useGamificationSummary } from "@repo/query/gamification/useGamificationSummary";
-import { useUseStreakShield } from "@repo/query/gamification/useGamificationMutations";
+import {
+  useUseStreakShield,
+  useInventory,
+  useRecoverStreak,
+} from "@repo/query/gamification/useGamificationMutations";
 import { useNotifications, useMarkNotificationsAsRead } from "@repo/query/gamification/useNotifications";
 import { useHabits } from "@repo/query/habits/useHabits";
 import { toast } from "react-hot-toast";
+import TransactionLedgerModal from "./transaction-ledger-modal";
 
 export default function PlayerStatusBar() {
   const { data: session } = useSession();
@@ -18,12 +23,41 @@ export default function PlayerStatusBar() {
   const { data: summary } = useGamificationSummary(userId);
   const { data: habits = [] } = useHabits(userId);
   const { data: notifications = [] } = useNotifications(userId);
+  const { data: inventory = [] } = useInventory(userId);
   const markReadMutation = useMarkNotificationsAsRead();
   const useShieldMutation = useUseStreakShield();
+  const recoverStreakMutation = useRecoverStreak();
 
   const [shieldModalOpen, setShieldModalOpen] = useState(false);
   const [levelModalOpen, setLevelModalOpen] = useState(false);
+  const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Power-Up counts
+  const getInvCount = (type: string) =>
+    inventory.find((i: any) => i.powerUpType === type)?.quantity || 0;
+  const shieldCount = summary?.shields ?? getInvCount("STREAK_SHIELD");
+  const freezeCount = getInvCount("STREAK_FREEZE");
+  const recoveryCount = getInvCount("STREAK_RECOVERY");
+
+  // Protection Modal Sub-tabs & Historical Date Selection
+  const [protectionTab, setProtectionTab] = useState<"SHIELD" | "FREEZE" | "RECOVERY">("SHIELD");
+  const [selectedDateOption, setSelectedDateOption] = useState<string>("yesterday");
+  const [customDate, setCustomDate] = useState<string>("");
+
+  const getTargetDate = (): Date => {
+    const d = new Date();
+    if (selectedDateOption === "yesterday") {
+      d.setDate(d.getDate() - 1);
+    } else if (selectedDateOption === "2days") {
+      d.setDate(d.getDate() - 2);
+    } else if (selectedDateOption === "3days") {
+      d.setDate(d.getDate() - 3);
+    } else if (selectedDateOption === "custom" && customDate) {
+      return new Date(customDate);
+    }
+    return d;
+  };
 
   // Theme tracking - default is dark
   const [theme, setTheme] = useState("dark");
@@ -62,14 +96,18 @@ export default function PlayerStatusBar() {
   const xpInCurrentLevel = Math.max(0, totalXp - currentLevelFloorXp);
   const levelProgress = Math.min(100, Math.round((xpInCurrentLevel / xpNeeded) * 100));
 
-  // Handle manual shield activation for a habit
+  // Handle manual shield activation for a habit on chosen date
   const handleUseShield = (habitId: string) => {
     if (!userId) return;
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    const targetDate = getTargetDate();
 
     useShieldMutation.mutate(
-      { userId, habitId, missedDate: yesterday.toISOString() },
+      {
+        userId,
+        habitId,
+        missedDate: targetDate.toISOString(),
+        itemType: "STREAK_SHIELD",
+      },
       {
         onSuccess: (res: any) => {
           toast.success(res.data?.message || "Streak Shield activated!");
@@ -82,20 +120,89 @@ export default function PlayerStatusBar() {
     );
   };
 
+  // Handle global 24-hr streak freeze
+  const handleUseFreeze = () => {
+    if (!userId) return;
+    if (freezeCount <= 0) {
+      toast.error("You do not have any Streak Freezes in your inventory.");
+      return;
+    }
+    const today = new Date();
+    useShieldMutation.mutate(
+      {
+        userId,
+        missedDate: today.toISOString(),
+        itemType: "STREAK_FREEZE",
+      },
+      {
+        onSuccess: () => {
+          toast.success("Streak Freeze activated! All routines paused for 24h ❄️");
+          setShieldModalOpen(false);
+        },
+        onError: (err: any) => {
+          toast.error(err.response?.data?.message || "Could not activate Streak Freeze.");
+        },
+      }
+    );
+  };
+
+  // Handle broken streak recovery
+  const handleRecoverStreak = (habitId: string) => {
+    if (!userId) return;
+    if (recoveryCount <= 0 && shieldCount <= 0) {
+      toast.error("You need a Streak Recovery Kit or Streak Shield to restore broken streaks.");
+      return;
+    }
+    const targetDate = getTargetDate();
+
+    recoverStreakMutation.mutate(
+      {
+        userId,
+        habitId,
+        missedDate: targetDate.toISOString(),
+      },
+      {
+        onSuccess: (res: any) => {
+          toast.success(res.data?.message || "Broken streak successfully restored! 🔄");
+          setShieldModalOpen(false);
+        },
+        onError: (err: any) => {
+          toast.error(err.response?.data?.message || "Could not restore streak.");
+        },
+      }
+    );
+  };
+
   return (
     <>
       <div className="sticky top-0 z-30 flex h-16 w-full items-center justify-end gap-3 sm:gap-4 border-b border-[var(--c-border)] bg-white/95 dark:bg-[#0c0d11]/85 px-6 backdrop-blur-md transition-colors duration-300">
-        {/* SPARKS BUTTON */}
-        <Link href="/habits" title="View Rewards Store">
-          <div className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-[#a8fe43] bg-[#a8fe43] px-3.5 sm:px-4 text-sm font-bold text-[#07140c] shadow-xs transition-all duration-300 hover:scale-105 hover:brightness-105 dark:border-[#a8fe43]/30 dark:from-[#a8fe43]/15 dark:to-[#3ae484]/5 dark:text-[#a8fe43] dark:hover:border-[#a8fe43]/60 dark:hover:shadow-[0_0_15px_rgba(168,254,67,0.25)]">
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              <div className="absolute top-0 left-0 h-full w-full -translate-x-[150%] skew-x-[-20deg] bg-white/40 transition-transform duration-700 ease-out group-hover:translate-x-[150%]" />
-            </div>
-            
-            <Zap className="relative z-10 h-4 w-4 fill-[#07140c] text-[#07140c] transition-transform duration-300 group-hover:scale-110" />
-            <span className="relative z-10 font-mono tracking-wide text-[#07140c]">{sparks} Sparks</span>
+        {/* DOUBLE XP ACTIVE INDICATOR */}
+        {summary?.isBoostActive && (
+          <div
+            title="Double XP Power-Up Active! All habits award 2× XP"
+            className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/15 px-3 text-xs font-bold text-amber-400 animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+          >
+            <Zap size={14} className="fill-amber-400 text-amber-400" />
+            <span className="font-mono">2× XP</span>
           </div>
-        </Link>
+        )}
+
+        {/* SPARKS BUTTON - Opens Ledger Audit */}
+        <button
+          type="button"
+          onClick={() => setLedgerModalOpen(true)}
+          title="Click to view Sparks & XP transaction ledger"
+          className="group relative flex h-9 items-center justify-center gap-2 rounded-full border border-[#a8fe43] bg-[#a8fe43] px-3.5 sm:px-4 text-sm font-bold text-[#07140c] shadow-xs transition-all duration-300 hover:scale-105 hover:brightness-105 dark:border-[#a8fe43]/30 dark:from-[#a8fe43]/15 dark:to-[#3ae484]/5 dark:text-[#a8fe43] dark:hover:border-[#a8fe43]/60 dark:hover:shadow-[0_0_15px_rgba(168,254,67,0.25)]"
+        >
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            <div className="absolute top-0 left-0 h-full w-full -translate-x-[150%] skew-x-[-20deg] bg-white/40 transition-transform duration-700 ease-out group-hover:translate-x-[150%]" />
+          </div>
+          
+          <Zap className="relative z-10 h-4 w-4 fill-[#07140c] text-[#07140c] transition-transform duration-300 group-hover:scale-110" />
+          <span className="relative z-10 font-mono tracking-wide text-[#07140c]">
+            {summary?.sparksBalance ?? sparks} Sparks
+          </span>
+        </button>
 
         {/* STREAK SHIELDS BUTTON */}
         <button
@@ -203,27 +310,27 @@ export default function PlayerStatusBar() {
         </Link>
       </div>
 
-      {/* ================= STREAK SHIELD POPUP MODAL ================= */}
+      {/* ================= STREAK SHIELD & PROTECTION MODAL ================= */}
       {shieldModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={() => setShieldModalOpen(false)}
-          style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)" }}
+          style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
         >
           <div
-            className="relative w-full max-w-[420px] overflow-hidden rounded-[24px] text-white"
+            className="relative w-full max-w-[480px] overflow-hidden rounded-[28px] text-white"
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "linear-gradient(165deg, #0F1D17 0%, #0A1410 40%, #0D1A14 100%)",
-              border: "1px solid rgba(59,130,246,0.15)",
-              boxShadow: "0 0 80px rgba(59,130,246,0.08), 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+              border: "1px solid rgba(59,130,246,0.2)",
+              boxShadow: "0 0 80px rgba(59,130,246,0.1), 0 25px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
             }}
           >
             {/* Decorative top gradient */}
             <div
               style={{
-                position: "absolute", top: 0, left: 0, right: 0, height: "120px",
-                background: "radial-gradient(ellipse 60% 80% at 30% 0%, rgba(59,130,246,0.12) 0%, transparent 70%)",
+                position: "absolute", top: 0, left: 0, right: 0, height: "130px",
+                background: "radial-gradient(ellipse 70% 80% at 30% 0%, rgba(59,130,246,0.15) 0%, transparent 70%)",
                 pointerEvents: "none",
               }}
             />
@@ -233,144 +340,243 @@ export default function PlayerStatusBar() {
               onClick={() => setShieldModalOpen(false)}
               className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
             >
               <X className="h-4 w-4 text-white/50" />
             </button>
 
             {/* Header */}
-            <div className="relative px-7 pt-7 pb-0">
+            <div className="relative px-7 pt-7 pb-2">
               <div className="flex items-start gap-4">
-                {/* Glowing Shield Icon */}
                 <div className="relative flex-shrink-0">
                   <div
                     className="flex h-14 w-14 items-center justify-center rounded-2xl"
                     style={{
-                      background: "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(59,130,246,0.05) 100%)",
-                      border: "1px solid rgba(59,130,246,0.25)",
-                      boxShadow: "0 0 20px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
+                      background: "linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0.08) 100%)",
+                      border: "1px solid rgba(59,130,246,0.3)",
+                      boxShadow: "0 0 20px rgba(59,130,246,0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
                     }}
                   >
-                    <Shield className="h-7 w-7 text-blue-400" style={{ filter: "drop-shadow(0 0 6px rgba(59,130,246,0.4))" }} />
+                    <Shield className="h-7 w-7 text-blue-400" />
                   </div>
-                  {/* Pulse ring */}
-                  <div
-                    className="absolute inset-0 rounded-2xl"
-                    style={{
-                      border: "1px solid rgba(59,130,246,0.15)",
-                      animation: "pulse 3s ease-in-out infinite",
-                    }}
-                  />
                 </div>
 
                 <div className="min-w-0 flex-1 pt-0.5">
-                  <h3 className="text-[17px] font-bold tracking-tight text-white">Streak Shields</h3>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                      style={{
-                        background: (summary?.shields ?? 0) > 0
-                          ? "rgba(59,130,246,0.15)"
-                          : "rgba(255,255,255,0.05)",
-                        color: (summary?.shields ?? 0) > 0 ? "#60A5FA" : "rgba(255,255,255,0.4)",
-                        border: `1px solid ${(summary?.shields ?? 0) > 0 ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.06)"}`,
-                      }}
-                    >
-                      <Shield className="h-3 w-3" />
-                      {summary?.shields ?? 0} {(summary?.shields ?? 0) === 1 ? "Shield" : "Shields"} Available
-                    </span>
-                  </div>
+                  <h3 className="text-[18px] font-bold tracking-tight text-white">Streak Defense Center</h3>
+                  <p className="text-[12px] text-white/50">
+                    Defend, freeze, or restore habits to protect your compounding streaks.
+                  </p>
                 </div>
               </div>
 
-              <p className="mt-4 text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
-                Protect your streaks when you miss a scheduled day. Shields keep your chain alive without changing completion records.
-              </p>
+              {/* AUTO-PROTECTION STATUS PILL */}
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-2 text-[11px] text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                <span>
+                  <strong>Auto-Streak Defense Active:</strong> Available shields will automatically step in if an active streak (&ge;2 days) misses a day.
+                </span>
+              </div>
+
+              {/* SUB-TABS */}
+              <div className="mt-4 flex rounded-xl border border-white/10 bg-white/5 p-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setProtectionTab("SHIELD")}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
+                    protectionTab === "SHIELD"
+                      ? "bg-blue-500/30 text-blue-300 shadow-xs border border-blue-500/40"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Shield ({shieldCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtectionTab("FREEZE")}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
+                    protectionTab === "FREEZE"
+                      ? "bg-emerald-500/30 text-emerald-300 shadow-xs border border-emerald-500/40"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Snowflake className="h-3.5 w-3.5" />
+                  <span>Freeze ({freezeCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtectionTab("RECOVERY")}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
+                    protectionTab === "RECOVERY"
+                      ? "bg-purple-500/30 text-purple-300 shadow-xs border border-purple-500/40"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Recover ({recoveryCount})</span>
+                </button>
+              </div>
             </div>
 
-            {/* Divider */}
-            <div className="mx-7 mt-5" style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent)" }} />
+            {/* HISTORICAL DATE PICKER (for Shield & Recovery tabs) */}
+            {protectionTab !== "FREEZE" && (
+              <div className="px-7 pt-2 pb-1">
+                <div className="mb-2 flex items-center justify-between text-[11px] text-white/50">
+                  <span className="flex items-center gap-1 font-semibold uppercase tracking-wider">
+                    <Calendar className="h-3 w-3" /> Select Target Date
+                  </span>
+                  <span className="font-mono text-white/70">
+                    {getTargetDate().toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
 
-            {/* Habit list */}
-            <div className="px-7 pt-4 pb-2">
-              <div className="mb-3 flex items-center gap-2">
-                <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  Apply to Yesterday
-                </span>
-                <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <div className="grid grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateOption("yesterday")}
+                    className={`rounded-lg py-1.5 text-[11px] font-medium border transition-all ${
+                      selectedDateOption === "yesterday"
+                        ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                        : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Yesterday
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateOption("2days")}
+                    className={`rounded-lg py-1.5 text-[11px] font-medium border transition-all ${
+                      selectedDateOption === "2days"
+                        ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                        : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                    }`}
+                  >
+                    2 Days Ago
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateOption("3days")}
+                    className={`rounded-lg py-1.5 text-[11px] font-medium border transition-all ${
+                      selectedDateOption === "3days"
+                        ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                        : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                    }`}
+                  >
+                    3 Days Ago
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateOption("custom")}
+                    className={`rounded-lg py-1.5 text-[11px] font-medium border transition-all ${
+                      selectedDateOption === "custom"
+                        ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                        : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Custom...
+                  </button>
+                </div>
+
+                {selectedDateOption === "custom" && (
+                  <div className="mt-2">
+                    <input
+                      type="date"
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      max={new Date().toISOString().split("T")[0]}
+                      className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-white outline-hidden focus:border-blue-400"
+                    />
+                  </div>
+                )}
               </div>
+            )}
 
-              {habits.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center rounded-2xl py-8"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}
-                >
-                  <Shield className="h-8 w-8 mb-2" style={{ color: "rgba(255,255,255,0.15)" }} />
-                  <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.3)" }}>No active habits found</p>
-                  <p className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>Create a habit to get started</p>
+            {/* TAB CONTENT */}
+            <div className="px-7 pt-3 pb-2">
+              {protectionTab === "FREEZE" ? (
+                /* FREEZE TAB */
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/40 bg-emerald-400/15 text-emerald-300">
+                    <Snowflake className="h-6 w-6" />
+                  </div>
+                  <h4 className="text-base font-bold text-white">24-Hour Streak Freeze</h4>
+                  <p className="mt-1 text-xs text-emerald-200/80 leading-relaxed">
+                    Going on vacation, feeling unwell, or traveling? A Streak Freeze halts all routines for 24 hours. Your streaks will not break even with 0 check-ins.
+                  </p>
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleUseFreeze}
+                      disabled={freezeCount <= 0 || useShieldMutation.isPending}
+                      className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all ${
+                        freezeCount > 0
+                          ? "border border-emerald-400/50 bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-md"
+                          : "cursor-not-allowed border border-white/10 bg-white/5 text-white/40"
+                      }`}
+                    >
+                      <Snowflake className="h-4 w-4" />
+                      {useShieldMutation.isPending ? "Freezing..." : `Freeze All Routines (${freezeCount} Available)`}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="max-h-52 space-y-2 overflow-y-auto pr-0.5" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}>
-                  {habits.map((h: any) => (
-                    <div
-                      key={h.id}
-                      className="group flex items-center justify-between rounded-xl px-3.5 py-3 transition-all duration-200"
-                      style={{
-                        background: "rgba(255,255,255,0.025)",
-                        border: "1px solid rgba(255,255,255,0.05)",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(59,130,246,0.06)";
-                        e.currentTarget.style.borderColor = "rgba(59,130,246,0.15)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(255,255,255,0.025)";
-                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)";
-                      }}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[13px]"
-                          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}
-                        >
-                          {(h.title || h.name || "?").charAt(0).toUpperCase()}
-                        </div>
-                        <span className="truncate text-[13px] font-medium text-white/80">{h.title || h.name}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleUseShield(h.id)}
-                        disabled={(summary?.shields ?? 0) <= 0 || useShieldMutation.isPending}
-                        className="flex-shrink-0 transition-all duration-200"
-                        style={{
-                          padding: "5px 14px",
-                          borderRadius: "10px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          background: (summary?.shields ?? 0) > 0 ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.04)",
-                          color: (summary?.shields ?? 0) > 0 ? "#60A5FA" : "rgba(255,255,255,0.2)",
-                          border: `1px solid ${(summary?.shields ?? 0) > 0 ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.06)"}`,
-                          cursor: (summary?.shields ?? 0) > 0 ? "pointer" : "not-allowed",
-                        }}
-                        onMouseEnter={(e) => {
-                          if ((summary?.shields ?? 0) > 0) {
-                            e.currentTarget.style.background = "rgba(59,130,246,0.25)";
-                            e.currentTarget.style.borderColor = "rgba(59,130,246,0.4)";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if ((summary?.shields ?? 0) > 0) {
-                            e.currentTarget.style.background = "rgba(59,130,246,0.15)";
-                            e.currentTarget.style.borderColor = "rgba(59,130,246,0.25)";
-                          }
-                        }}
-                      >
-                        {useShieldMutation.isPending ? "..." : "Protect"}
-                      </button>
+                /* SHIELD / RECOVERY HABIT LIST */
+                <div>
+                  <div className="mb-2 text-[10px] uppercase font-bold tracking-wider text-white/40">
+                    {protectionTab === "SHIELD" ? "Select habit to protect:" : "Select habit streak to recover:"}
+                  </div>
+
+                  {habits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-2xl py-8 border border-dashed border-white/10 bg-white/5">
+                      <Shield className="h-8 w-8 mb-2 text-white/20" />
+                      <p className="text-xs text-white/40">No active habits found</p>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="max-h-48 space-y-2 overflow-y-auto pr-0.5">
+                      {habits.map((h: any) => (
+                        <div
+                          key={h.id}
+                          className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 hover:border-white/20 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-white/70">
+                              {(h.title || h.name || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <span className="truncate text-xs font-medium text-white/90">
+                              {h.title || h.name}
+                            </span>
+                          </div>
+
+                          {protectionTab === "SHIELD" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUseShield(h.id)}
+                              disabled={shieldCount <= 0 || useShieldMutation.isPending}
+                              className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                                shieldCount > 0
+                                  ? "border border-blue-500/40 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                                  : "cursor-not-allowed border border-white/10 bg-white/5 text-white/30"
+                              }`}
+                            >
+                              {useShieldMutation.isPending ? "..." : "Protect"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRecoverStreak(h.id)}
+                              disabled={(recoveryCount <= 0 && shieldCount <= 0) || recoverStreakMutation.isPending}
+                              className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                                recoveryCount > 0 || shieldCount > 0
+                                  ? "border border-purple-500/40 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30"
+                                  : "cursor-not-allowed border border-white/10 bg-white/5 text-white/30"
+                              }`}
+                            >
+                              {recoverStreakMutation.isPending ? "..." : "Recover"}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -378,41 +584,21 @@ export default function PlayerStatusBar() {
             {/* Footer */}
             <div
               className="mt-3 flex items-center justify-between px-7 py-4"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}
+              style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)" }}
             >
               <Link
                 href="/habits"
                 onClick={() => setShieldModalOpen(false)}
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors duration-200"
-                style={{ color: "#34D399" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "#6EE7B7"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "#34D399"; }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <Zap className="h-3.5 w-3.5" />
-                <span>Get more in Store</span>
+                <span>Shop Power-Ups</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
               <button
                 type="button"
                 onClick={() => setShieldModalOpen(false)}
-                className="transition-all duration-200"
-                style={{
-                  padding: "7px 20px",
-                  borderRadius: "12px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.7)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-                  e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-                  e.currentTarget.style.color = "rgba(255,255,255,0.7)";
-                }}
+                className="rounded-xl border border-white/10 bg-white/10 px-5 py-2 text-xs font-semibold text-white/80 hover:bg-white/15 transition-all"
               >
                 Close
               </button>
@@ -674,6 +860,11 @@ export default function PlayerStatusBar() {
       )}
 
       {/* Keyframe animations */}
+      <TransactionLedgerModal
+        isOpen={ledgerModalOpen}
+        onClose={() => setLedgerModalOpen(false)}
+      />
+
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes shimmer {
           0% { background-position: -200% 0; }

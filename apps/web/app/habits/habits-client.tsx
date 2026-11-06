@@ -7,7 +7,7 @@ import { useSparksState } from "../../store/gamification";
 import { Plus, Sparkles } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useHabits } from "@repo/query/habits/useHabits";
-import { useCreateHabit, useDeleteHabit, useToggleHabit, useUpdateHabit } from "@repo/query/habits/useMutations";
+import { useCreateHabit, useDeleteHabit, useToggleHabit, useUpdateHabit, useArchiveHabit } from "@repo/query/habits/useMutations";
 import { useShieldUsages } from "@repo/query/gamification/useGamificationMutations";
 import { gamificationQueryKeys } from "@repo/query/gamification/queryKeys";
 import { Badge } from "@repo/ui/badge";
@@ -15,6 +15,7 @@ import { Button } from "@repo/ui/button";
 import { toast } from "react-hot-toast";
 
 import { AddHabitModal } from "../../components/habits/add-habit-modal";
+import { ArchivedView } from "../../components/habits/archived-view";
 import { C, weekDays } from "../../components/habits/constants";
 import type { HabitTabId } from "../../components/habits/constants";
 import { HabitTabs } from "../../components/habits/habit-tabs";
@@ -53,6 +54,7 @@ export default function MomentumApp() {
   const createHabitMutation = useCreateHabit();
   const deleteHabitMutation = useDeleteHabit();
   const toggleHabitMutation = useToggleHabit();
+  const archiveHabitMutation = useArchiveHabit();
 
   const habits: Habit[] = useMemo(() => {
     return (fetchedHabits as FetchedHabit[]).map((h) => ({
@@ -157,6 +159,14 @@ export default function MomentumApp() {
     setMenuOpenId(null);
   };
 
+  const handleArchiveHabit = (habitId: string) => {
+    archiveHabitMutation.mutate(habitId, {
+      onSuccess: () => toast.success("Habit archived! View or restore it anytime in the Archived tab."),
+      onError: (error: any) => toast.error(error.response?.data?.message || error.message || "Failed to archive habit."),
+    });
+    setMenuOpenId(null);
+  };
+
   const saveHabit = (draft: any) => {
     const userId = (session?.user as any)?.id;
 
@@ -228,7 +238,7 @@ export default function MomentumApp() {
     () =>
       habits.map((habit) => {
         const week = getWeek(habit, weekOffset);
-        const streak = habitStreak(habit.logs, shieldUsages, habit.id);
+        const streak = habitStreak(habit.logs, shieldUsages, habit.id, 0, habit);
         return { ...habit, week, streak, best: Math.max(habit.best, streak) };
       }),
     [habits, weekOffset, shieldUsages]
@@ -259,6 +269,7 @@ export default function MomentumApp() {
         toggleDay={toggleDay}
         deleteHabit={deleteHabit}
         editHabit={openEditModal}
+        archiveHabit={handleArchiveHabit}
         menuOpenId={menuOpenId}
         setMenuOpenId={setMenuOpenId}
       />
@@ -276,6 +287,7 @@ export default function MomentumApp() {
         }}
       />
     ),
+    Archived: <ArchivedView />,
     Settings: <SettingsView habits={habits} deleteHabit={deleteHabit} />,
   } satisfies Record<HabitTabId, ReactNode>;
 

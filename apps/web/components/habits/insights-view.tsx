@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { Dispatch, ElementType, SetStateAction } from "react";
 import {
+  Archive,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,9 @@ import { baseMonday, formatWeekLabel, getMonthWeekOffsets, monthStartOffset } fr
 import { toast } from "react-hot-toast";
 
 function getScheduleBadge(habit: Habit) {
+  if (habit.mode === "flex") {
+    return `${habit.perWeek || 3}x / week`;
+  }
   if (habit.mode !== "days" || !habit.days || habit.days.length === 0) return null;
   const d = [...habit.days].sort((a, b) => a - b);
   if (d.length === 7) return null;
@@ -37,6 +41,7 @@ type InsightsViewProps = {
   toggleDay: (habitId: string, dayIndex: number, weekOff?: number) => void;
   deleteHabit: (habitId: string) => void;
   editHabit: (habitId: string) => void;
+  archiveHabit?: (habitId: string) => void;
   menuOpenId: string | null;
   setMenuOpenId: Dispatch<SetStateAction<string | null>>;
 };
@@ -49,6 +54,7 @@ export function InsightsView({
   toggleDay,
   deleteHabit,
   editHabit,
+  archiveHabit,
   menuOpenId,
   setMenuOpenId,
 }: InsightsViewProps) {
@@ -143,8 +149,8 @@ export function InsightsView({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border" style={{ borderColor: C.border, backgroundColor: C.surface }}>
-          <div className="flex flex-col gap-8 border-b px-6 py-6" style={{ borderColor: C.border }}>
+        <div className="rounded-2xl border" style={{ borderColor: C.border, backgroundColor: C.surface }}>
+          <div className="flex flex-col gap-8 rounded-t-2xl border-b px-6 py-6" style={{ borderColor: C.border }}>
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-3">
                 <button
@@ -238,7 +244,7 @@ export function InsightsView({
           </div>
 
           {habits.length === 0 ? (
-            <div className="px-6 py-16 text-center">
+            <div className="rounded-b-2xl px-6 py-16 text-center">
               <p style={{ color: C.text }}>No habits yet.</p>
               <p className="mt-1 text-sm" style={{ color: C.muted }}>
                 Add your first one to start building a streak.
@@ -246,7 +252,7 @@ export function InsightsView({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-[240px_1fr] border-b px-6 py-4" style={{ borderColor: C.border }}>
+              <div className="grid grid-cols-[280px_1fr] border-b px-6 py-4" style={{ borderColor: C.border }}>
                 <div />
                 <div className="grid grid-cols-7">
                   {weekDates.map((date, i) => (
@@ -260,71 +266,111 @@ export function InsightsView({
                 </div>
               </div>
 
-              {habitRows.map((habit) => (
-                <div
-                  key={habit.id}
-                  className="grid grid-cols-[240px_1fr] items-center border-b px-6 py-5 transition-colors last:border-0 hover:bg-[var(--c-surface-soft)]"
-                  style={{ borderColor: C.border }}
-                >
-                  <div className="flex items-center justify-between pr-6">
-                    <div>
-                      <h3 className="font-medium" style={{ color: C.text }}>
-                        {habit.name}
-                      </h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
-                          style={{ borderColor: `${C.primary}33`, backgroundColor: `${C.primary}1A`, color: C.primary }}
-                        >
-                          <Flame className="h-3 w-3" />
-                          {habit.streak}
-                        </span>
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-                          style={{ borderColor: C.border, color: C.muted }}
-                        >
-                          <Trophy className="h-3 w-3" />
-                          {habit.best}
-                        </span>
-                        {getScheduleBadge(habit) && (
+              {habitRows.map((habit, index) => {
+                const isNearBottom = index >= habitRows.length - 1;
+                return (
+                  <div
+                    key={habit.id}
+                    className={`grid grid-cols-[280px_1fr] items-center border-b px-6 py-5 transition-colors last:border-0 last:rounded-b-2xl hover:bg-[var(--c-surface-soft)] ${
+                      menuOpenId === habit.id ? "relative z-30" : "relative z-0"
+                    }`}
+                    style={{ borderColor: C.border }}
+                  >
+                    <div className="flex items-center justify-between pr-6">
+                      <div className="min-w-0 pr-2">
+                        <h3 className="truncate font-medium" style={{ color: C.text }} title={habit.name}>
+                          {habit.name}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span
                             className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
-                            style={{ borderColor: C.border, color: C.muted, ...fontMono }}
+                            style={{ borderColor: `${C.primary}33`, backgroundColor: `${C.primary}1A`, color: C.primary }}
                           >
-                            {getScheduleBadge(habit)}
+                            <Flame className="h-3 w-3" />
+                            {habit.streak}
                           </span>
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                            style={{ borderColor: C.border, color: C.muted }}
+                          >
+                            <Trophy className="h-3 w-3" />
+                            {habit.best}
+                          </span>
+                          {getScheduleBadge(habit) && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                              style={{ borderColor: C.border, color: C.muted, ...fontMono }}
+                            >
+                              {getScheduleBadge(habit)}
+                            </span>
+                          )}
+                          {habit.goal === "count" && habit.target && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                              style={{ borderColor: C.border, color: C.muted, ...fontMono }}
+                            >
+                              {habit.target} {habit.unit || "units"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="relative shrink-0">
+                        <button
+                          onClick={() => setMenuOpenId(menuOpenId === habit.id ? null : habit.id)}
+                          className="rounded-lg p-1.5 transition-colors hover:bg-[var(--c-surface-soft)]"
+                          style={{ color: C.muted }}
+                          aria-label={`Menu for ${habit.name}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                        {menuOpenId === habit.id && (
+                          <div
+                            className={`absolute right-0 z-50 w-44 rounded-xl border p-1.5 shadow-2xl backdrop-blur-md ${
+                              isNearBottom ? "bottom-full mb-2" : "top-full mt-2"
+                            }`}
+                            style={{
+                              borderColor: C.border,
+                              backgroundColor: C.surface,
+                              boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--c-border)",
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                setMenuOpenId(null);
+                                editHabit(habit.id);
+                              }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--c-surface-soft)]"
+                              style={{ color: C.text }}
+                            >
+                              <Pencil className="h-4 w-4 text-[var(--c-muted)]" />
+                              Edit habit
+                            </button>
+                            {archiveHabit && (
+                              <button
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  archiveHabit(habit.id);
+                                }}
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/10"
+                              >
+                                <Archive className="h-4 w-4" />
+                                Archive habit
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setMenuOpenId(null);
+                                deleteHabit(habit.id);
+                              }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete habit
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="relative">
-                      <button
-                        onClick={() => setMenuOpenId(menuOpenId === habit.id ? null : habit.id)}
-                        className="rounded-lg p-1.5 transition-colors"
-                        style={{ color: C.muted }}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                      {menuOpenId === habit.id && (
-                        <div className="absolute right-0 z-30 mt-2 w-40 rounded-lg border p-1" style={{ borderColor: C.border, backgroundColor: C.surface }}>
-                          <button
-                            onClick={() => editHabit(habit.id)}
-                            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--c-surface-soft)]"
-                            style={{ color: C.text }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit habit
-                          </button>
-                          <button
-                            onClick={() => deleteHabit(habit.id)}
-                            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete habit
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   <div className="grid grid-cols-7 gap-2">
                     {habit.week.map((done, dayIndex) => {
@@ -393,7 +439,8 @@ export function InsightsView({
                     })}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </>
           )}
         </div>

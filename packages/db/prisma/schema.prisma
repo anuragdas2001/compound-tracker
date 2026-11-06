@@ -68,6 +68,12 @@ model User {
   powerUpUsage     PowerUpUsage[]
   notifications    Notification[]
   payments         Payment[]
+  dailyNotes       DailyNote[]
+  achievements     UserAchievement[]
+  challenges       UserChallenge[]
+  friends          Friendship[] @relation("UserFriends")
+  friendOf         Friendship[] @relation("FriendOfUser")
+  settings         UserSettings?
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -116,8 +122,21 @@ model HabitLog {
   habit   Habit  @relation(fields: [habitId], references: [id])
 
   completedAt DateTime
+  value       Int      @default(1)
 
   createdAt DateTime @default(now())
+}
+
+model DailyNote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateKey   String   // "YYYY-MM-DD" logical date
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, dateKey])
 }
 
 model UserGamification {
@@ -128,6 +147,8 @@ model UserGamification {
   totalXp       Int @default(0)
   level         Int @default(1)
   sparksBalance Int @default(150)
+  boostMultiplier Int @default(1)
+  boostExpiresAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,4 +226,62 @@ model Payment {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model UserAchievement {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementKey String   // e.g. "FIRST_HABIT", "STREAK_7", "STREAK_30", "CENTURION_100", "SHIELD_COLLECTOR"
+  title          String
+  description    String
+  xpReward       Int      @default(50)
+  sparksReward   Int      @default(25)
+  unlockedAt     DateTime @default(now())
+
+  @@unique([userId, achievementKey])
+}
+
+model UserChallenge {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String    @db.ObjectId
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeKey String    // e.g. "SPRINT_7", "CENTURION_100", "CONSISTENCY_30"
+  title        String
+  progress     Int       @default(0)
+  target       Int       @default(7)
+  sparksReward Int       @default(500)
+  xpReward     Int       @default(200)
+  isCompleted  Boolean   @default(false)
+  completedAt  DateTime?
+  isClaimed    Boolean   @default(false)
+  claimedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, challengeKey])
+}
+
+model Friendship {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friendId  String   @db.ObjectId
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
+  status    String   @default("ACCEPTED") // "PENDING", "ACCEPTED"
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+}
+
+model UserSettings {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String   @unique @db.ObjectId
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailStreakReminder Boolean  @default(true)
+  emailWeeklyDigest   Boolean  @default(true)
+  isPublicProfile     Boolean  @default(true)
+  timezone            String   @default("UTC")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

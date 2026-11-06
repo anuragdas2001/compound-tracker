@@ -14,7 +14,9 @@
     "./gamification/useGamificationMutations": "./src/gamification/useGamificationMutations.ts",
     "./gamification/useLeaderboard": "./src/gamification/useLeaderboard.ts",
     "./gamification/useNotifications": "./src/gamification/useNotifications.ts",
-    "./gamification/queryKeys": "./src/gamification/queryKeys.ts"
+    "./gamification/queryKeys": "./src/gamification/queryKeys.ts",
+    "./users/useUserMutations": "./src/users/useUserMutations.ts",
+    "./users/queryKeys": "./src/users/queryKeys.ts"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.84.1",

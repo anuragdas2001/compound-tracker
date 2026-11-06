@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarCheck,
   Check,
   Flame,
   MessageSquare,
+  Minus,
   Plus,
   Sparkles,
   Target,
@@ -16,11 +17,19 @@ import {
 
 import { useSession } from "next-auth/react";
 import { useShieldUsages } from "@repo/query/gamification/useGamificationMutations";
+import { useDailyNote } from "@repo/query/habits/useHabits";
+import { useSaveDailyNote, useUpdateProgress } from "@repo/query/habits/useMutations";
 import { toast } from "react-hot-toast";
 
 import { C, fontDisplay, fontMono, weekDays } from "./constants";
 import type { Habit } from "./types";
-import { baseMonday, getWeek, habitStreak, isDateCompleted } from "./utils";
+import {
+  baseMonday,
+  getDateValue,
+  habitStreak,
+  isDateCompleted,
+  isScheduledToday,
+} from "./utils";
 
 type TodayViewProps = {
   habits: Habit[];
@@ -43,60 +52,143 @@ const dailyTips = [
   "Your streak is a promise to your future self. Keep it light, keep it going.",
 ];
 
-// 1. TODAY VIEW
 export function TodayView({
   habits,
   todayIndex,
   toggleDay,
   greeting,
   GreetingIcon,
-  dailyNote,
-  setDailyNote,
   onAddHabit,
 }: TodayViewProps) {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const { data: shieldUsages = [] } = useShieldUsages(userId);
 
-  // Optimistic UI: tick instantly, then fall back to server truth once it changes
-  const [optimistic, setOptimistic] = useState<
-    Record<string, { base: boolean; value: boolean }>
-  >({});
+  const todayKey = useMemo(() => {
+    return new Date().toISOString().split("T")[0] || "";
+  }, []);
 
-  const isScheduledToday = (h: any) => {
-    if (h.mode === "days" && Array.isArray(h.days) && h.days.length > 0) {
-      return h.days.includes(todayIndex);
+  // Persistent Daily Note integration
+  const { data: serverNote } = useDailyNote(userId, todayKey);
+  const saveNoteMutation = useSaveDailyNote();
+  const [noteContent, setNoteContent] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (serverNote?.content !== undefined) {
+      setNoteContent(serverNote.content);
     }
-    return true;
+  }, [serverNote]);
+
+  const handleNoteChange = (text: string) => {
+    setNoteContent(text);
+    setSaveStatus("saving");
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      if (!userId) return;
+      saveNoteMutation.mutate(
+        { userId, dateKey: todayKey, content: text },
+        {
+          onSuccess: () => {
+            setSaveStatus("saved");
+            setTimeout(() => setSaveStatus("idle"), 2500);
+          },
+          onError: () => {
+            setSaveStatus("idle");
+            toast.error("Failed to save reflection note.");
+          },
+        }
+      );
+    }, 800);
   };
 
+  // Progress mutation for numeric / counter habits
+  const updateProgressMutation = useUpdateProgress();
+
+  // Optimistic UI for counter and toggle states
+  const [optimisticValues, setOptimisticValues] = useState<Record<string, number>>({});
+
+  const todayDate = useMemo(() => new Date(), []);
+
   const todayHabits = habits.map((h: any) => {
-    const serverDone = getWeek(h, 0)[todayIndex] || false;
-    const o = optimistic[h.id];
-    const done = o && o.base === serverDone ? o.value : serverDone;
-    const scheduled = isScheduledToday(h);
-    return { ...h, done, serverDone, scheduled, streak: habitStreak(h.logs, shieldUsages, h.id) };
+    const isCount = h.goal === "count";
+    const targetVal = isCount ? h.target || 1 : 1;
+    const serverVal = getDateValue(h.logs || [], todayDate);
+    const currentVal: number =
+      (optimisticValues[h.id] !== undefined ? optimisticValues[h.id] : serverVal) ?? 0;
+    const done = isCount ? currentVal >= targetVal : currentVal > 0;
+    const scheduled = isScheduledToday(h, todayIndex);
+
+    // Flex calculations
+    let flexProgress = "";
+    if (h.mode === "flex") {
+      const monday = baseMonday(0);
+      let weekCount = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        if (isDateCompleted(h.logs || [], d, 0, h.target || 1, h.goal || "done")) {
+          weekCount++;
+        }
+      }
+      const targetWeekly = h.perWeek || 3;
+      flexProgress = `${weekCount}/${targetWeekly} this wk`;
+    }
+
+    return {
+      ...h,
+      done,
+      currentVal,
+      targetVal,
+      isCount,
+      scheduled,
+      flexProgress,
+      streak: habitStreak(h.logs || [], shieldUsages, h.id, 0, h),
+    };
   });
 
   const handleToggle = (habit: any) => {
-    if (!habit.scheduled && !habit.done) {
+    if (!habit.scheduled && !habit.done && habit.mode !== "flex") {
       toast.error(`"${habit.name}" is not scheduled for today.`);
       return;
     }
 
-    setOptimistic((prev) => ({
-      ...prev,
-      [habit.id]: { base: habit.serverDone, value: !habit.done },
-    }));
-    toggleDay(habit.id);
+    const nextVal = habit.done ? 0 : habit.targetVal;
+    setOptimisticValues((prev) => ({ ...prev, [habit.id]: nextVal }));
+
+    if (habit.isCount) {
+      updateProgressMutation.mutate({ id: habit.id, value: nextVal });
+    } else {
+      toggleDay(habit.id);
+    }
   };
 
-  const pending = todayHabits.filter((h: any) => h.scheduled && !h.done);
+  const handleIncrement = (e: React.MouseEvent, habit: any) => {
+    e.stopPropagation();
+    const nextVal = habit.currentVal + 1;
+    setOptimisticValues((prev) => ({ ...prev, [habit.id]: nextVal }));
+    updateProgressMutation.mutate({ id: habit.id, value: nextVal });
+  };
+
+  const handleDecrement = (e: React.MouseEvent, habit: any) => {
+    e.stopPropagation();
+    if (habit.currentVal <= 0) return;
+    const nextVal = Math.max(0, habit.currentVal - 1);
+    setOptimisticValues((prev) => ({ ...prev, [habit.id]: nextVal }));
+    updateProgressMutation.mutate({ id: habit.id, value: nextVal });
+  };
+
+  const pending = todayHabits.filter((h: any) => (h.scheduled || h.mode === "flex") && !h.done);
   const completed = todayHabits.filter((h: any) => h.done);
-  const restHabits = todayHabits.filter((h: any) => !h.scheduled && !h.done);
+  const restHabits = todayHabits.filter((h: any) => !h.scheduled && h.mode !== "flex" && !h.done);
 
   const completedCount = completed.length;
-  const dueCount = todayHabits.filter((h: any) => h.scheduled || h.done).length;
+  const dueCount = todayHabits.filter((h: any) => h.scheduled || h.mode === "flex" || h.done).length;
   const progress =
     dueCount === 0 ? (todayHabits.length > 0 ? 100 : 0) : Math.round((completedCount / dueCount) * 100);
   const isAllDone = dueCount > 0 && pending.length === 0;
@@ -117,7 +209,7 @@ export function TodayView({
     const dayTarget = scheduledForDay.length;
     const done = isToday
       ? completedCount
-      : habits.filter((h: any) => isDateCompleted(h.logs, date)).length;
+      : habits.filter((h: any) => isDateCompleted(h.logs || [], date, 0, h.target || 1, h.goal || "done")).length;
     const pct = dayTarget === 0 || isFuture ? 0 : Math.min(100, Math.round((done / dayTarget) * 100));
     return { label, date: date.getDate(), isToday, isFuture, done, dayTarget, pct };
   });
@@ -158,97 +250,172 @@ export function TodayView({
     ? "All scheduled habits completed for today. Rest up!"
     : `${pending.length} ${pending.length === 1 ? "habit" : "habits"} left today. Tap one to check it off.`;
 
-  const renderRow = (habit: any, isNext = false, isRest = false) => (
-    <button
-      key={habit.id}
-      onClick={() => handleToggle(habit)}
-      disabled={isRest && !habit.done}
-      aria-pressed={habit.done}
-      aria-label={`${habit.done ? "Undo" : "Complete"} ${habit.name}`}
-      className={`group flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all duration-200 ${
-        isRest && !habit.done
-          ? "cursor-not-allowed opacity-60 border-dashed"
-          : "hover:border-[var(--c-border-hover)] active:scale-[0.99]"
-      }`}
-      style={{
-        borderColor: isNext ? `${C.primary}55` : C.border,
-        backgroundColor: habit.done ? C.surface : isRest ? "transparent" : C.surfaceSoft,
-      }}
-    >
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
-          habit.done
-            ? ""
-            : isRest
-            ? "border-dashed"
-            : "group-hover:border-[var(--c-primary)] group-hover:bg-[var(--c-primary)]/10"
+  const renderRow = (habit: any, isNext = false, isRest = false) => {
+    const isCount = habit.isCount;
+    const percentDone = Math.min(100, Math.round((habit.currentVal / Math.max(1, habit.targetVal)) * 100));
+
+    return (
+      <div
+        key={habit.id}
+        onClick={() => handleToggle(habit)}
+        className={`group relative flex w-full flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border p-4 text-left transition-all duration-200 cursor-pointer ${
+          isRest && !habit.done
+            ? "cursor-not-allowed opacity-60 border-dashed"
+            : "hover:border-[var(--c-border-hover)] active:scale-[0.99]"
         }`}
         style={{
-          borderColor: habit.done ? C.primary : isRest ? `${C.borderHover}80` : C.borderHover,
-          backgroundColor: habit.done ? C.primary : "transparent",
+          borderColor: isNext ? `${C.primary}55` : C.border,
+          backgroundColor: habit.done ? C.surface : isRest ? "transparent" : C.surfaceSoft,
         }}
       >
-        <Check
-          className={`h-4 w-4 transition-all duration-200 ${
-            habit.done ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:opacity-40"
-          }`}
-          style={{ color: habit.done ? "#06120B" : C.primary }}
-          strokeWidth={3}
-        />
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span
-            className={`block truncate font-medium transition-colors ${habit.done ? "line-through" : ""}`}
-            style={{ color: habit.done ? C.muted : isRest ? C.muted : C.text }}
+        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+          {/* Completion Checkmark / Circular Trigger */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle(habit);
+            }}
+            disabled={isRest && !habit.done}
+            aria-label={`${habit.done ? "Undo" : "Complete"} ${habit.name}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
+              habit.done
+                ? ""
+                : isRest
+                ? "border-dashed"
+                : "group-hover:border-[var(--c-primary)] group-hover:bg-[var(--c-primary)]/10"
+            }`}
+            style={{
+              borderColor: habit.done ? C.primary : isRest ? `${C.borderHover}80` : C.borderHover,
+              backgroundColor: habit.done ? C.primary : "transparent",
+            }}
           >
-            {habit.name}
-          </span>
-          {isNext && (
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-              style={{ backgroundColor: `${C.primary}1A`, color: C.primary, ...fontMono }}
+            <Check
+              className={`h-4 w-4 transition-all duration-200 ${
+                habit.done ? "scale-100 opacity-100" : "scale-75 opacity-0 group-hover:opacity-40"
+              }`}
+              style={{ color: habit.done ? "#06120B" : C.primary }}
+              strokeWidth={3}
+            />
+          </button>
+
+          {/* Habit Details */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`truncate font-medium transition-colors ${habit.done ? "line-through text-[var(--c-muted)]" : "text-[var(--c-text)]"}`}
+              >
+                {habit.name}
+              </span>
+
+              {isNext && (
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ backgroundColor: `${C.primary}1A`, color: C.primary, ...fontMono }}
+                >
+                  Up next
+                </span>
+              )}
+
+              {habit.mode === "flex" && (
+                <span
+                  className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ borderColor: `${C.primary}40`, backgroundColor: `${C.primary}15`, color: C.primary, ...fontMono }}
+                >
+                  {habit.flexProgress}
+                </span>
+              )}
+
+              {isRest && (
+                <span
+                  className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+                  style={{ borderColor: C.border, backgroundColor: C.surface, color: C.muted, ...fontMono }}
+                >
+                  Rest day
+                </span>
+              )}
+            </div>
+
+            {/* Target & Progress bar for numeric counter habits */}
+            {isCount ? (
+              <div className="mt-2 space-y-1.5 max-w-xs">
+                <div className="flex items-center justify-between text-xs font-medium" style={fontMono}>
+                  <span style={{ color: habit.done ? C.primary : C.muted }}>
+                    {habit.currentVal} / {habit.targetVal} {habit.unit || "units"}
+                  </span>
+                  <span style={{ color: C.muted }}>{percentDone}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-[var(--c-surface)] rounded-full overflow-hidden border border-[var(--c-border)]/60">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${percentDone}%`,
+                      backgroundColor: habit.done ? C.primary : "var(--c-primary)",
+                    }}
+                  />
+                </div>
+              </div>
+            ) : habit.category ? (
+              <span className="mt-1 flex items-center gap-1 text-xs" style={{ color: C.muted }}>
+                <Zap className="h-3 w-3 text-[var(--c-primary)]" />
+                {habit.category}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Right Action Area */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--c-border)]/50">
+          {/* Numeric Increment / Decrement Counter Buttons */}
+          {isCount && !isRest && (
+            <div
+              className="flex items-center gap-1.5 bg-[var(--c-surface)] p-1 rounded-xl border border-[var(--c-border)]"
+              onClick={(e) => e.stopPropagation()}
             >
-              Up next
+              <button
+                type="button"
+                onClick={(e) => handleDecrement(e, habit)}
+                disabled={habit.currentVal <= 0}
+                className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--c-surface-soft)] text-[var(--c-text)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Decrease count"
+              >
+                <Minus size={13} />
+              </button>
+              <span className="w-8 text-center text-xs font-bold" style={fontMono}>
+                {habit.currentVal}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => handleIncrement(e, habit)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[var(--c-primary)]/15 text-[var(--c-primary)] hover:bg-[var(--c-primary)]/25 transition-colors font-bold"
+                title="Increase count"
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Streak Badge */}
+          {habit.streak > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+              style={{ borderColor: `${C.primary}33`, backgroundColor: `${C.primary}1A`, color: C.primary }}
+              title={`${habit.streak}-streak`}
+            >
+              <Flame className="h-3 w-3" />
+              {habit.streak}
             </span>
           )}
-          {isRest && (
-            <span
-              className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
-              style={{ borderColor: C.border, backgroundColor: C.surface, color: C.muted, ...fontMono }}
-            >
-              Rest day
+
+          {!habit.done && !isRest && (
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-400">
+              <Sparkles className="h-3 w-3" />+5
             </span>
           )}
-        </span>
-        {habit.category && (
-          <span className="mt-1 flex items-center gap-1 text-xs" style={{ color: C.muted }}>
-            <Zap className="h-3 w-3" />
-            {habit.category}
-          </span>
-        )}
-      </span>
-
-      <span className="flex shrink-0 items-center gap-2">
-        {habit.streak > 0 && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
-            style={{ borderColor: `${C.primary}33`, backgroundColor: `${C.primary}1A`, color: C.primary }}
-            title={`${habit.streak}-day streak`}
-          >
-            <Flame className="h-3 w-3" />
-            {habit.streak}
-          </span>
-        )}
-        {!habit.done && !isRest && (
-          <span className="hidden items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-400 sm:inline-flex">
-            <Sparkles className="h-3 w-3" />+5
-          </span>
-        )}
-      </span>
-    </button>
-  );
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -369,7 +536,7 @@ export function TodayView({
                       Completed · {completed.length}
                     </h3>
                     <span className="text-xs" style={{ color: `${C.muted}99` }}>
-                      Tap to undo
+                      Tap to undo or edit count
                     </span>
                   </div>
                   {completed.map((h: any) => renderRow(h, false, false))}
@@ -407,7 +574,7 @@ export function TodayView({
           )}
         </section>
 
-        {/* DAILY REFLECTION */}
+        {/* DAILY REFLECTION - PERSISTED IN DATABASE */}
         <section>
           <div
             className="rounded-2xl border p-6"
@@ -420,15 +587,23 @@ export function TodayView({
                   Daily Reflection
                 </h3>
               </div>
-              <span className="text-xs" style={{ color: `${C.muted}99`, ...fontMono }}>
-                {dailyNote.length}/280
-              </span>
+              <div className="flex items-center gap-3">
+                {saveStatus === "saving" && (
+                  <span className="text-xs text-amber-400 animate-pulse font-medium">Saving...</span>
+                )}
+                {saveStatus === "saved" && (
+                  <span className="text-xs text-[var(--c-primary)] font-medium">Saved to database ✓</span>
+                )}
+                <span className="text-xs" style={{ color: `${C.muted}99`, ...fontMono }}>
+                  {noteContent.length}/280
+                </span>
+              </div>
             </div>
             <textarea
-              value={dailyNote}
+              value={noteContent}
               maxLength={280}
-              onChange={(e) => setDailyNote(e.target.value)}
-              placeholder="How did today feel? Any blockers or wins?"
+              onChange={(e) => handleNoteChange(e.target.value)}
+              placeholder="How did today feel? Any blockers or wins? (Persisted to your journal)"
               className="h-24 w-full resize-none rounded-xl border p-3 text-sm outline-none transition-colors focus:border-[var(--c-primary)]/60"
               style={{ borderColor: C.border, backgroundColor: C.surfaceSoft, color: C.text }}
             />

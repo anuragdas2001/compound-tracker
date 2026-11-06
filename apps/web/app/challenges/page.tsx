@@ -3,9 +3,9 @@
 import { useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useHabits } from '@repo/query/habits/useHabits';
-import { useGamificationSummary } from '@repo/query/gamification/useGamificationSummary';
-import { useShieldUsages } from '@repo/query/gamification/useGamificationMutations';
+import { useShieldUsages, useChallenges, useClaimChallenge } from '@repo/query/gamification/useGamificationMutations';
 import { habitStreak } from '../../components/habits/utils';
+import { toast } from 'react-hot-toast';
 
 import { 
   Swords, 
@@ -16,19 +16,30 @@ import {
   CalendarDays, 
   Sparkles,
   CheckCircle2,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
+
+const ICON_MAP: Record<string, any> = {
+  Flame,
+  Shield,
+  Target,
+  Users,
+  Sparkles,
+  Zap,
+};
 
 export default function ChallengesPage() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
 
   const { data: habits = [] } = useHabits(userId);
-  const { data: summary } = useGamificationSummary(userId);
   const { data: shieldUsages = [] } = useShieldUsages(userId);
+  const { data: serverChallenges = [] } = useChallenges(userId);
+  const claimChallengeMutation = useClaimChallenge();
 
   const activeHabits = useMemo(() => habits.filter((h: any) => !h.archived), [habits]);
 
@@ -47,30 +58,32 @@ export default function ChallengesPage() {
     return best;
   }, [activeHabits, shieldUsages]);
 
-  // Real Active 30-Day Challenge
-  const activeChallenge = useMemo(() => {
-    const currentProgress = Math.min(30, maxStreak);
-    const progressPercent = Math.round((currentProgress / 30) * 100);
-    const isCompleted = maxStreak >= 30;
-
-    return {
-      title: '30-Day Consistency Challenge',
-      description: 'Build an unbroken streak of at least 30 consecutive compounding days.',
-      progress: currentProgress,
-      total: 30,
-      progressPercent,
-      isCompleted,
-      rewardSparks: 1500,
-      color: '#3B82F6',
-      icon: Shield,
-    };
-  }, [maxStreak]);
-
-  // Real Tracked Challenges
+  // Challenges list (from server or initial computed fallback)
   const challengesList = useMemo(() => {
+    if (serverChallenges.length > 0) {
+      return serverChallenges.map((ch) => ({
+        id: ch.key,
+        key: ch.key,
+        title: ch.title,
+        description: ch.description,
+        duration: ch.duration,
+        difficulty: ch.difficulty,
+        current: ch.progress,
+        total: ch.target,
+        rewardSparks: ch.sparksReward,
+        rewardXp: ch.xpReward,
+        icon: ICON_MAP[ch.icon] || Flame,
+        color: ch.color,
+        isCompleted: ch.isCompleted,
+        isClaimed: ch.isClaimed,
+        claimedAt: ch.claimedAt,
+      }));
+    }
+
     return [
       {
-        id: 'sprint',
+        id: 'SPRINT_7',
+        key: 'SPRINT_7',
         title: '7-Day Momentum Sprint',
         description: 'Complete all scheduled habits for 7 consecutive days without breaking your chain.',
         duration: '7 Days',
@@ -78,12 +91,33 @@ export default function ChallengesPage() {
         current: Math.min(7, maxStreak),
         total: 7,
         rewardSparks: 500,
+        rewardXp: 200,
         icon: Flame,
         color: '#F59E0B',
         isCompleted: maxStreak >= 7,
+        isClaimed: false,
+        claimedAt: null,
       },
       {
-        id: 'centurion',
+        id: 'CONSISTENCY_30',
+        key: 'CONSISTENCY_30',
+        title: '30-Day Consistency Challenge',
+        description: 'Build an unbroken streak of at least 30 consecutive compounding days.',
+        duration: '30 Days',
+        difficulty: 'Hard',
+        current: Math.min(30, maxStreak),
+        total: 30,
+        rewardSparks: 1500,
+        rewardXp: 750,
+        icon: Shield,
+        color: '#3B82F6',
+        isCompleted: maxStreak >= 30,
+        isClaimed: false,
+        claimedAt: null,
+      },
+      {
+        id: 'CENTURION_100',
+        key: 'CENTURION_100',
         title: 'Centurion Milestone',
         description: 'Log 100 total habit completion sessions across your active routines.',
         duration: '100 Sessions',
@@ -91,38 +125,53 @@ export default function ChallengesPage() {
         current: Math.min(100, totalLogs),
         total: 100,
         rewardSparks: 1000,
+        rewardXp: 500,
         icon: Target,
         color: '#EC4899',
         isCompleted: totalLogs >= 100,
+        isClaimed: false,
+        claimedAt: null,
       },
       {
-        id: 'architect',
-        title: 'Habit System Architect',
-        description: 'Design and sustain a daily system of 5 or more active habits.',
-        duration: '5 Habits',
-        difficulty: 'Medium',
-        current: Math.min(5, activeHabits.length),
-        total: 5,
-        rewardSparks: 400,
-        icon: Sparkles,
+        id: 'COMMUNITY_COLLECTIVE',
+        key: 'COMMUNITY_COLLECTIVE',
+        title: 'Global Community Momentum',
+        description: 'Contribute to the collective Compound community goal of 50 total habits completed.',
+        duration: 'Community Quest',
+        difficulty: 'Legendary',
+        current: Math.min(50, totalLogs),
+        total: 50,
+        rewardSparks: 750,
+        rewardXp: 350,
+        icon: Users,
         color: '#10B981',
-        isCompleted: activeHabits.length >= 5,
-      },
-      {
-        id: 'vault',
-        title: 'Sparks Treasury Challenge',
-        description: 'Amass a reward balance of 300 or more Sparks in your rewards wallet.',
-        duration: '300 Sparks',
-        difficulty: 'Hard',
-        current: Math.min(300, summary?.sparksBalance ?? 150),
-        total: 300,
-        rewardSparks: 600,
-        icon: Zap,
-        color: '#F59E0B',
-        isCompleted: (summary?.sparksBalance ?? 150) >= 300,
+        isCompleted: totalLogs >= 50,
+        isClaimed: false,
+        claimedAt: null,
       },
     ];
-  }, [maxStreak, totalLogs, activeHabits, summary]);
+  }, [serverChallenges, maxStreak, totalLogs]);
+
+  const activeMain = challengesList[1] || challengesList[0]!;
+
+  const handleClaimReward = (challengeKey: string) => {
+    if (!userId) {
+      toast.error('Please sign in to claim rewards.');
+      return;
+    }
+
+    claimChallengeMutation.mutate(
+      { userId, challengeKey },
+      {
+        onSuccess: (res: any) => {
+          toast.success(res.data?.message || 'Challenge reward claimed successfully! 🎉');
+        },
+        onError: (err: any) => {
+          toast.error(err.response?.data?.message || 'Could not claim challenge reward.');
+        },
+      }
+    );
+  };
 
   return (
     <main
@@ -148,11 +197,11 @@ export default function ChallengesPage() {
                 <Swords size={20} />
               </div>
               <h1 className="mt-2 text-4xl font-semibold text-[var(--c-text)] sm:text-5xl" style={fontDisplay}>
-                Challenges
+                Challenges & Quests
               </h1>
             </div>
             <p className="mt-4 text-[var(--c-muted)] max-w-xl">
-              Push your limits and test your consistency. Complete real-time challenges to earn massive Sparks and level up.
+              Push your discipline to the limit. Complete structured quests and claim real Sparks & XP directly into your ledger.
             </p>
           </div>
         </header>
@@ -165,73 +214,96 @@ export default function ChallengesPage() {
             </h2>
             <span className="flex items-center gap-2 text-sm text-[var(--c-primary)]" style={fontMono}>
               <Sparkles size={16} />
-              {activeChallenge.rewardSparks} Sparks Potential
+              +{activeMain.rewardSparks} Sparks & +{activeMain.rewardXp} XP
             </span>
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 sm:p-10 shadow-sm group hover:border-[var(--c-border-hover)] transition-all">
             <div 
               className="absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-10 blur-3xl transition-opacity group-hover:opacity-20"
-              style={{ backgroundColor: activeChallenge.color }}
+              style={{ backgroundColor: activeMain.color }}
             />
             
             <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-6">
                 <div 
                   className="flex h-20 w-20 flex-none items-center justify-center rounded-2xl bg-[var(--c-surface-soft)] shadow-inner"
-                  style={{ border: `1px solid ${activeChallenge.color}40` }}
+                  style={{ border: `1px solid ${activeMain.color}40` }}
                 >
-                  <activeChallenge.icon size={40} color={activeChallenge.color} />
+                  <activeMain.icon size={40} color={activeMain.color} />
                 </div>
                 
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs uppercase tracking-widest text-[var(--c-primary)] font-semibold">Active Goal</span>
-                    {activeChallenge.isCompleted && (
+                    {activeMain.isCompleted && (
                       <span className="flex items-center gap-1 text-xs text-[#4ADE80] font-semibold bg-[#4ADE80]/10 px-2 py-0.5 rounded-full">
                         <CheckCircle2 size={12} /> Completed
                       </span>
                     )}
                   </div>
                   <h3 className="text-2xl font-semibold text-[var(--c-text)]" style={fontDisplay}>
-                    {activeChallenge.title}
+                    {activeMain.title}
                   </h3>
                   <p className="mt-1 text-sm text-[var(--c-muted)] max-w-md">
-                    {activeChallenge.description}
+                    {activeMain.description}
                   </p>
                   
                   <div className="flex items-center gap-4 mt-4 text-xs text-[var(--c-muted)]">
                     <span className="flex items-center gap-1.5 bg-[var(--c-surface-soft)] px-2.5 py-1 rounded-md" style={fontMono}>
                       <CalendarDays size={14} className="text-[var(--c-text)]" />
-                      Target: {activeChallenge.total} Days
+                      Target: {activeMain.total}
                     </span>
                     <span className="flex items-center gap-1.5 bg-[var(--c-surface-soft)] px-2.5 py-1 rounded-md" style={fontMono}>
                       <Flame size={14} className="text-[#EF4444]" />
-                      Current Streak: {activeChallenge.progress} Days
+                      Progress: {activeMain.current}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Progress Section */}
-              <div className="w-full md:w-1/3 flex flex-col gap-2">
+              {/* Progress & Claim Section */}
+              <div className="w-full md:w-1/3 flex flex-col gap-3">
                 <div className="flex justify-between text-sm font-medium">
-                  <span className="text-[var(--c-text)]" style={fontMono}>Day {activeChallenge.progress} / {activeChallenge.total}</span>
-                  <span className="text-[var(--c-muted)]" style={fontMono}>{activeChallenge.progressPercent}%</span>
+                  <span className="text-[var(--c-text)]" style={fontMono}>
+                    {activeMain.current} / {activeMain.total}
+                  </span>
+                  <span className="text-[var(--c-muted)]" style={fontMono}>
+                    {Math.min(100, Math.round((activeMain.current / activeMain.total) * 100))}%
+                  </span>
                 </div>
                 <div className="h-3 w-full bg-[var(--c-surface-soft)] rounded-full overflow-hidden border border-[var(--c-border)]/50">
                   <div 
                     className="h-full rounded-full transition-all duration-1000 ease-out" 
                     style={{ 
-                      width: `${activeChallenge.progressPercent}%`,
-                      background: `linear-gradient(90deg, ${activeChallenge.color}, #60A5FA)`,
-                      boxShadow: `0 0 10px ${activeChallenge.color}80`
+                      width: `${Math.min(100, Math.round((activeMain.current / activeMain.total) * 100))}%`,
+                      background: `linear-gradient(90deg, ${activeMain.color}, #60A5FA)`,
+                      boxShadow: `0 0 10px ${activeMain.color}80`
                     }} 
                   />
                 </div>
-                <p className="text-xs text-right text-[var(--c-muted)] mt-1">
-                  {activeChallenge.isCompleted ? 'Challenge accomplished!' : `${activeChallenge.total - activeChallenge.progress} days remaining to achieve goal.`}
-                </p>
+
+                {/* Claim Button */}
+                {activeMain.isCompleted ? (
+                  activeMain.isClaimed ? (
+                    <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-[#a8fe43]/15 text-[#a8fe43] font-bold text-xs border border-[#a8fe43]/30">
+                      <CheckCircle2 size={16} /> Reward Claimed ✓
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleClaimReward(activeMain.key)}
+                      disabled={claimChallengeMutation.isPending}
+                      className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#a8fe43] text-[#07140c] font-bold text-sm shadow-[0_0_20px_rgba(168,254,67,0.4)] hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      <Sparkles size={16} /> Claim +{activeMain.rewardSparks} Sparks & +{activeMain.rewardXp} XP
+                    </button>
+                  )
+                ) : (
+                  <p className="text-xs text-right text-[var(--c-muted)]">
+                    {activeMain.total - activeMain.current} units remaining to unlock rewards.
+                  </p>
+                )}
               </div>
 
             </div>
@@ -242,10 +314,10 @@ export default function ChallengesPage() {
         <div className="mt-16">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-[var(--c-text)]" style={fontDisplay}>
-              Tracked Challenges
+              Active & Community Quests
             </h2>
             <p className="text-sm text-[var(--c-muted)] mt-1">
-              Live progression tracked automatically from your habit entries.
+              Live progression tracked automatically from your database habit logs.
             </p>
           </div>
           
@@ -257,47 +329,60 @@ export default function ChallengesPage() {
               return (
                 <div 
                   key={challenge.id} 
-                  className="group relative flex flex-col rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 transition-all duration-300 hover:border-[var(--c-primary)]/40 hover:shadow-lg"
+                  className="group relative flex flex-col justify-between rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] p-6 transition-all duration-300 hover:border-[var(--c-primary)]/40 hover:shadow-lg"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div 
-                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--c-surface-soft)] transition-colors"
-                      style={{ border: `1px solid ${challenge.color}30` }}
-                    >
-                      <Icon size={24} color={challenge.color} />
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div 
+                        className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--c-surface-soft)] transition-colors"
+                        style={{ border: `1px solid ${challenge.color}30` }}
+                      >
+                        <Icon size={24} color={challenge.color} />
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1">
+                        <span 
+                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md text-[var(--c-text)] bg-[var(--c-surface-soft)]"
+                          style={fontMono}
+                        >
+                          <Zap size={14} className="text-[#F59E0B]" />
+                          +{challenge.rewardSparks} Sparks
+                        </span>
+                        <span className="text-[10px] text-amber-400 font-semibold" style={fontMono}>
+                          +{challenge.rewardXp} XP
+                        </span>
+                      </div>
                     </div>
                     
-                    <span 
-                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md text-[var(--c-text)] bg-[var(--c-surface-soft)]"
-                      style={fontMono}
-                    >
-                      <Zap size={14} className="text-[#F59E0B]" />
-                      +{challenge.rewardSparks} Sparks
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg text-[var(--c-text)]">
-                        {challenge.title}
-                      </h3>
-                      {challenge.isCompleted ? (
-                        <span className="flex items-center gap-1 text-xs text-[var(--c-primary)] font-semibold">
-                          <CheckCircle2 size={14} /> Completed
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs text-[var(--c-muted)] font-medium">
-                          <Clock size={12} /> In Progress
-                        </span>
-                      )}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg text-[var(--c-text)]">
+                          {challenge.title}
+                        </h3>
+                        {challenge.isCompleted ? (
+                          challenge.isClaimed ? (
+                            <span className="flex items-center gap-1 text-xs text-[#a8fe43] font-semibold bg-[#a8fe43]/10 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 size={12} /> Claimed
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs text-[#4ADE80] font-semibold bg-[#4ADE80]/10 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 size={12} /> Ready to Claim
+                            </span>
+                          )
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-[var(--c-muted)] font-medium">
+                            <Clock size={12} /> In Progress
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm leading-snug text-[var(--c-muted)]">
+                        {challenge.description}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm leading-snug text-[var(--c-muted)]">
-                      {challenge.description}
-                    </p>
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="mt-6 pt-4 border-t border-[var(--c-border)]/40">
+                  {/* Progress & Claim CTA */}
+                  <div className="mt-6 pt-4 border-t border-[var(--c-border)]/40 space-y-3">
                     <div className="flex justify-between text-xs font-semibold mb-1.5" style={fontMono}>
                       <span className="text-[var(--c-muted)]">{challenge.current} / {challenge.total}</span>
                       <span className="text-[var(--c-text)]">{percent}%</span>
@@ -311,6 +396,17 @@ export default function ChallengesPage() {
                         }}
                       />
                     </div>
+
+                    {challenge.isCompleted && !challenge.isClaimed && (
+                      <button
+                        type="button"
+                        onClick={() => handleClaimReward(challenge.key)}
+                        disabled={claimChallengeMutation.isPending}
+                        className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-[#a8fe43] text-[#07140c] font-bold text-xs shadow-md hover:brightness-110 active:scale-98 transition-all"
+                      >
+                        <Sparkles size={14} /> Claim +{challenge.rewardSparks} Sparks & +{challenge.rewardXp} XP
+                      </button>
+                    )}
                   </div>
                 </div>
               );

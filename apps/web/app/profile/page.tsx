@@ -26,9 +26,11 @@ import {
   ChevronRight,
   TrendingUp,
   Shield,
-  LogOut
+  LogOut,
+  Share2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import EditProfileModal from '../../components/edit-profile-modal';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
@@ -45,6 +47,7 @@ export default function ProfilePage() {
   const { data: session, update } = useSession();
   const userId = (session?.user as any)?.id;
   const [isVerifying, setIsVerifying] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
 
   const { data: summary } = useGamificationSummary(userId);
   const { data: habits = [] } = useHabits(userId);
@@ -332,8 +335,28 @@ export default function ProfilePage() {
                       {isVerifying ? 'Verifying...' : 'Verify Email'}
                     </button>
                   )}
-                  <Link href="/settings" className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-primary)]/5 hover:text-[var(--c-primary)] transition-all duration-300 font-semibold group w-full sm:w-auto shrink-0">
-                    <Edit3 size={16} className="group-hover:rotate-12 transition-transform" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/profile?user=${(session?.user as any)?.id || ''}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      toast.success('Public profile link copied to clipboard! 📋');
+                    }}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:text-[var(--c-primary)] transition-all font-semibold cursor-pointer w-full sm:w-auto shrink-0"
+                    title="Share Profile"
+                  >
+                    <Share2 size={16} />
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditProfileOpen(true)}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:text-[var(--c-primary)] transition-all font-semibold cursor-pointer w-full sm:w-auto shrink-0"
+                  >
+                    <Edit3 size={16} />
+                    Edit Profile
+                  </button>
+                  <Link href="/settings" className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)]/50 shadow-sm hover:border-[var(--c-primary)]/50 hover:bg-[var(--c-primary)]/5 hover:text-[var(--c-primary)] transition-all duration-300 font-semibold group w-full sm:w-auto shrink-0">
                     Settings
                   </Link>
                   <button
@@ -560,6 +583,11 @@ export default function ProfilePage() {
         </div>
       </div>
       
+      <EditProfileModal
+        isOpen={editProfileOpen}
+        onClose={() => setEditProfileOpen(false)}
+      />
+
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes shimmer {
           100% {

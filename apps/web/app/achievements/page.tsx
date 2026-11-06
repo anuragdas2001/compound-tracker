@@ -4,25 +4,38 @@ import { useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useHabits } from '@repo/query/habits/useHabits';
 import { useGamificationSummary } from '@repo/query/gamification/useGamificationSummary';
-import { useShieldUsages } from '@repo/query/gamification/useGamificationMutations';
+import { useShieldUsages, useAchievements } from '@repo/query/gamification/useGamificationMutations';
 import { habitStreak } from '../../components/habits/utils';
 
 import { 
   Award, 
-  Flame, 
   Target, 
   Zap, 
   CheckCircle2, 
   Clock, 
   Trophy, 
-  Star,
-  Lock,
-  Medal,
-  Shield
+  Star, 
+  Lock, 
+  Medal, 
+  Shield,
+  Sparkles,
+  Crown
 } from 'lucide-react';
 
 const fontDisplay = { fontFamily: "'Fraunces', ui-serif, Georgia, serif" };
 const fontMono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
+
+const ICON_MAP: Record<string, any> = {
+  Trophy,
+  Medal,
+  Star,
+  Zap,
+  Crown,
+  Shield,
+  Sparkles,
+  Target,
+  Award,
+};
 
 export default function AchievementsPage() {
   const { data: session } = useSession();
@@ -31,6 +44,7 @@ export default function AchievementsPage() {
   const { data: habits = [] } = useHabits(userId);
   const { data: summary } = useGamificationSummary(userId);
   const { data: shieldUsages = [] } = useShieldUsages(userId);
+  const { data: serverAchievements = [] } = useAchievements(userId);
 
   const activeHabits = useMemo(() => habits.filter((h: any) => !h.archived), [habits]);
 
@@ -63,15 +77,31 @@ export default function AchievementsPage() {
     return best;
   }, [activeHabits, shieldUsages]);
 
-  // Dynamic real achievements evaluated from actual database state
+  // Combined real achievements (preferred from server with database UserAchievement unlocks)
   const achievements = useMemo(() => {
-    const sparksBalance = summary?.sparksBalance ?? 150;
+    if (serverAchievements.length > 0) {
+      return serverAchievements.map((item) => ({
+        id: item.key,
+        title: item.title,
+        description: item.description,
+        icon: ICON_MAP[item.icon] || Trophy,
+        unlockedAt: item.isUnlocked ? (item.unlockedAt ? new Date(item.unlockedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unlocked') : null,
+        category: item.category,
+        rarity: item.rarity,
+        color: item.color,
+        xpReward: item.xpReward,
+        sparksReward: item.sparksReward,
+        progress: item.progress,
+      }));
+    }
+
+    // Client-side fallback while loading initial query
     const playerLevel = summary?.level ?? 1;
     const hasShield = (summary?.shields ?? 0) > 0 || shieldUsages.length > 0;
 
     return [
       { 
-        id: 1, 
+        id: 'FIRST_HABIT', 
         title: 'Bronze Pioneer', 
         description: 'Complete your first habit in the platform.', 
         icon: Trophy, 
@@ -79,10 +109,12 @@ export default function AchievementsPage() {
         category: 'Milestones',
         rarity: 'Common',
         color: '#CD7F32',
+        xpReward: 50,
+        sparksReward: 25,
         progress: `${Math.min(1, totalLogs)} / 1`,
       },
       { 
-        id: 2, 
+        id: 'STREAK_7', 
         title: 'Silver Streak', 
         description: 'Maintain a 7-day streak on any habit.', 
         icon: Medal, 
@@ -90,10 +122,12 @@ export default function AchievementsPage() {
         category: 'Streaks',
         rarity: 'Uncommon',
         color: '#C0C0C0',
+        xpReward: 100,
+        sparksReward: 50,
         progress: `${Math.min(7, maxStreak)} / 7 days`,
       },
       { 
-        id: 3, 
+        id: 'STREAK_30', 
         title: 'Gold Standard', 
         description: 'Reach a 30-day streak of compounding habits.', 
         icon: Trophy, 
@@ -101,69 +135,55 @@ export default function AchievementsPage() {
         category: 'Streaks',
         rarity: 'Rare',
         color: '#FFD700',
+        xpReward: 250,
+        sparksReward: 100,
         progress: `${Math.min(30, maxStreak)} / 30 days`,
       },
       { 
-        id: 4, 
-        title: 'Sparks Vault', 
-        description: 'Accumulate a balance of 250 or more Sparks.', 
-        icon: Zap, 
-        unlockedAt: sparksBalance >= 250 ? 'Unlocked' : null, 
-        category: 'Milestones',
-        rarity: 'Epic',
-        color: '#F59E0B',
-        progress: `${Math.min(250, sparksBalance)} / 250 Sparks`,
-      },
-      { 
-        id: 5, 
-        title: 'Centurion', 
+        id: 'CENTURION_100', 
+        title: 'Centurion Master', 
         description: 'Log 100 total habit check-in sessions.', 
         icon: Target, 
         unlockedAt: totalLogs >= 100 ? 'Unlocked' : null, 
-        category: 'Milestones',
-        rarity: 'Legendary',
-        color: '#B9F2FF',
-        progress: `${Math.min(100, totalLogs)} / 100 check-ins`,
+        category: 'Volume',
+        rarity: 'Epic',
+        color: '#A855F7',
+        xpReward: 500,
+        sparksReward: 250,
+        progress: `${Math.min(100, totalLogs)} / 100`,
       },
       { 
-        id: 6, 
-        title: 'Habit Architect', 
-        description: 'Build a system of 5 or more active habits.', 
-        icon: Star, 
-        unlockedAt: activeHabits.length >= 5 ? 'Unlocked' : null, 
-        category: 'Challenges',
+        id: 'LEVEL_5', 
+        title: 'Ascending Habitier', 
+        description: 'Advance your player progression to Level 5.', 
+        icon: Zap, 
+        unlockedAt: playerLevel >= 5 ? 'Unlocked' : null, 
+        category: 'Level',
         rarity: 'Uncommon',
-        color: '#50C878',
-        progress: `${Math.min(5, activeHabits.length)} / 5 habits`,
+        color: '#3B82F6',
+        xpReward: 100,
+        sparksReward: 50,
+        progress: `${Math.min(5, playerLevel)} / 5`,
       },
       { 
-        id: 7, 
-        title: 'Shield Guardian', 
-        description: 'Acquire or activate a Streak Shield to preserve consistency.', 
+        id: 'SHIELD_PROTECTOR', 
+        title: 'Aegis Defender', 
+        description: 'Protect a habit streak using a Streak Shield or Freeze.', 
         icon: Shield, 
         unlockedAt: hasShield ? 'Unlocked' : null, 
-        category: 'Milestones',
-        rarity: 'Rare',
-        color: '#3B82F6',
+        category: 'Shields',
+        rarity: 'Common',
+        color: '#38BDF8',
+        xpReward: 50,
+        sparksReward: 25,
         progress: hasShield ? '1 / 1' : '0 / 1',
       },
-      { 
-        id: 8, 
-        title: 'Level 5 Master', 
-        description: 'Reach Player Level 5 through consistent habit tracking.', 
-        icon: Award, 
-        unlockedAt: playerLevel >= 5 ? 'Unlocked' : null, 
-        category: 'Milestones',
-        rarity: 'Mythic',
-        color: '#8B5CF6',
-        progress: `Level ${playerLevel} / 5`,
-      },
     ];
-  }, [totalLogs, firstLogDate, maxStreak, summary, shieldUsages, activeHabits]);
+  }, [serverAchievements, totalLogs, firstLogDate, maxStreak, summary, shieldUsages]);
 
   const unlockedCount = achievements.filter(a => a.unlockedAt).length;
   const totalCount = achievements.length;
-  const progress = Math.round((unlockedCount / totalCount) * 100);
+  const progress = Math.round((unlockedCount / Math.max(1, totalCount)) * 100);
 
   const recentUnlock = achievements.find(a => a.unlockedAt);
 
@@ -191,11 +211,11 @@ export default function AchievementsPage() {
                 <Award size={20} />
               </div>
               <h1 className="mt-2 text-4xl font-semibold text-[var(--c-text)] sm:text-5xl" style={fontDisplay}>
-                Achievements
+                Achievements & Badges
               </h1>
             </div>
             <p className="mt-4 text-[var(--c-muted)] max-w-xl">
-              Celebrate your consistency. Real-time milestones and badges unlocked through your actual daily compounding actions.
+              Celebrate your consistency. Permanent database badges with automatic XP & Sparks bonuses earned through your compounding routines.
             </p>
           </div>
           
@@ -242,6 +262,10 @@ export default function AchievementsPage() {
                 <p className="mt-2 text-lg text-[var(--c-muted)]">
                   {recentUnlock.description}
                 </p>
+                <div className="mt-3 flex items-center gap-3 text-xs" style={fontMono}>
+                  <span className="text-amber-400 font-semibold">+{recentUnlock.xpReward} XP</span>
+                  <span className="text-[var(--c-primary)] font-semibold">+{recentUnlock.sparksReward} Sparks</span>
+                </div>
               </div>
             </div>
           </div>
@@ -300,6 +324,10 @@ export default function AchievementsPage() {
                     <p className="mt-1.5 text-xs text-[var(--c-muted)] leading-relaxed">
                       {item.description}
                     </p>
+                    <div className="mt-2 flex items-center gap-2 text-[11px]" style={fontMono}>
+                      <span className="text-amber-400 font-semibold">+{item.xpReward} XP</span>
+                      <span className="text-[var(--c-primary)] font-semibold">+{item.sparksReward} Sparks</span>
+                    </div>
                   </div>
 
                   <div className="mt-6 flex items-center justify-between border-t border-[var(--c-border)]/40 pt-4 text-xs">

@@ -2,7 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException 
 import { PrismaService } from "../prisma/prisma.service";
 import { GamificationService } from "../gamification/gamification.service";
 
-import {CreateHabitDto,UpdateHabitDto} from "@repo/api";
+import { CreateHabitDto, UpdateHabitDto } from "@repo/api";
 
 @Injectable()
 export class HabitsService {
@@ -46,11 +46,11 @@ export class HabitsService {
     });
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, archived = false) {
     return this.prisma.habit.findMany({
       where: {
         userId,
-        archived: false,
+        archived,
       },
       include: {
         logs: true,
@@ -109,6 +109,15 @@ export class HabitsService {
     });
   }
 
+  async unarchive(id: string) {
+    return this.prisma.habit.update({
+      where: { id },
+      data: {
+        archived: false,
+      },
+    });
+  }
+
   async remove(id: string) {
     await this.prisma.habitLog.deleteMany({
       where: { habitId: id },
@@ -118,14 +127,13 @@ export class HabitsService {
     });
   }
 
-
   async completeHabit(
     habitId: string,
     completedAt?: string,
   ) {
     const habit = await this.prisma.habit.findUnique({
       where: { id: habitId },
-      select: { userId: true, mode: true, days: true },
+      select: { userId: true, mode: true, days: true, target: true },
     });
 
     if (!habit) {
@@ -151,10 +159,12 @@ export class HabitsService {
       }
     }
 
+    const targetVal = habit.target || 1;
     const log = await this.prisma.habitLog.create({
       data: {
         habitId,
         completedAt: date,
+        value: targetVal,
       },
     });
 
@@ -171,7 +181,97 @@ export class HabitsService {
   ) {
     const habit = await this.prisma.habit.findUnique({
       where: { id: habitId },
-      select: { userId: true, mode: true, days: true },
+      select: { userId: true, mode: true, days: true, goal: true, target: true },
+    });
+
+    if (!habit) {
+      throw new NotFoundException("Habit not found");
+    }
+
+    const target = habit.target || 1;
+    const date = completedAt ? new Date(completedAt) : new Date();
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingLogs = await this.prisma.habitLog.findMany({
+      where: {
+        habitId,
+        completedAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    const isCurrentlyComplete = existingLogs.some((l) => (l.value ?? 1) >= target);
+
+    if (existingLogs.length > 0 && isCurrentlyComplete) {
+      const logIdToRevoke = existingLogs[0]?.id;
+      await this.prisma.habitLog.deleteMany({
+        where: {
+          id: { in: existingLogs.map((l) => l.id) },
+        },
+      });
+
+      if (habit.userId && logIdToRevoke) {
+        await this.gamificationService.revokeHabitCompletion(habit.userId, habitId, logIdToRevoke);
+      }
+
+      return { status: "uncompleted", value: 0, completed: false };
+    } else {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const targetDayStart = new Date(date);
+      targetDayStart.setHours(0, 0, 0, 0);
+
+      if (targetDayStart.getTime() < todayStart.getTime()) {
+        throw new BadRequestException("Cannot mark habits complete after their scheduled day has passed.");
+      }
+
+      // Check scheduled days only if mode is "days" (flex and daily are allowed on any day)
+      if (habit.mode === "days" && habit.days && habit.days.length > 0) {
+        const dayIndex = (date.getDay() + 6) % 7;
+        const utcDayIndex = (date.getUTCDay() + 6) % 7;
+        if (!habit.days.includes(dayIndex) && !habit.days.includes(utcDayIndex)) {
+          throw new BadRequestException("This habit is not scheduled for this day.");
+        }
+      }
+
+      let log;
+      const firstExisting = existingLogs[0];
+      if (firstExisting) {
+        log = await this.prisma.habitLog.update({
+          where: { id: firstExisting.id },
+          data: { value: target },
+        });
+      } else {
+        log = await this.prisma.habitLog.create({
+          data: {
+            habitId,
+            completedAt: date,
+            value: target,
+          },
+        });
+      }
+
+      if (habit.userId) {
+        await this.gamificationService.awardHabitCompletion(habit.userId, habitId, log.id);
+      }
+
+      return { status: "completed", value: target, completed: true, log };
+    }
+  }
+
+  async updateProgress(
+    habitId: string,
+    value: number,
+    completedAt?: string,
+  ) {
+    const habit = await this.prisma.habit.findUnique({
+      where: { id: habitId },
+      select: { userId: true, mode: true, days: true, goal: true, target: true },
     });
 
     if (!habit) {
@@ -194,27 +294,46 @@ export class HabitsService {
       },
     });
 
-    if (existingLogs.length > 0) {
-      const logIdToRevoke = existingLogs[0]?.id;
-      await this.prisma.habitLog.deleteMany({
-        where: {
-          id: { in: existingLogs.map((l) => l.id) },
-        },
-      });
+    const target = habit.target || 1;
+    const targetValue = Math.max(0, value);
 
-      if (habit.userId && logIdToRevoke) {
-        await this.gamificationService.revokeHabitCompletion(habit.userId, habitId, logIdToRevoke);
+    const existingLog = existingLogs[0];
+    if (existingLog) {
+      const previousValue = existingLog.value ?? 1;
+
+      if (targetValue <= 0) {
+        await this.prisma.habitLog.deleteMany({
+          where: { id: { in: existingLogs.map((l) => l.id) } },
+        });
+
+        if (habit.userId && previousValue >= target) {
+          await this.gamificationService.revokeHabitCompletion(habit.userId, habitId, existingLog.id);
+        }
+
+        return { status: "uncompleted", value: 0, completed: false };
+      } else {
+        const updatedLog = await this.prisma.habitLog.update({
+          where: { id: existingLog.id },
+          data: { value: targetValue },
+        });
+
+        if (targetValue >= target && previousValue < target && habit.userId) {
+          await this.gamificationService.awardHabitCompletion(habit.userId, habitId, existingLog.id);
+        } else if (targetValue < target && previousValue >= target && habit.userId) {
+          await this.gamificationService.revokeHabitCompletion(habit.userId, habitId, existingLog.id);
+        }
+
+        return {
+          status: targetValue >= target ? "completed" : "in_progress",
+          value: targetValue,
+          target,
+          completed: targetValue >= target,
+          log: updatedLog,
+        };
       }
-
-      return { status: "uncompleted" };
     } else {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const targetDayStart = new Date(date);
-      targetDayStart.setHours(0, 0, 0, 0);
-
-      if (targetDayStart.getTime() < todayStart.getTime()) {
-        throw new BadRequestException("Cannot mark habits complete after their scheduled day has passed.");
+      if (targetValue <= 0) {
+        return { status: "uncompleted", value: 0, completed: false };
       }
 
       if (habit.mode === "days" && habit.days && habit.days.length > 0) {
@@ -229,15 +348,36 @@ export class HabitsService {
         data: {
           habitId,
           completedAt: date,
+          value: targetValue,
         },
       });
 
-      if (habit.userId) {
+      if (targetValue >= target && habit.userId) {
         await this.gamificationService.awardHabitCompletion(habit.userId, habitId, log.id);
       }
 
-      return { status: "completed" };
+      return {
+        status: targetValue >= target ? "completed" : "in_progress",
+        value: targetValue,
+        target,
+        completed: targetValue >= target,
+        log,
+      };
     }
   }
-}
 
+  async getDailyNote(userId: string, dateKey: string) {
+    const note = await this.prisma.dailyNote.findUnique({
+      where: { userId_dateKey: { userId, dateKey } },
+    });
+    return note || { userId, dateKey, content: "" };
+  }
+
+  async saveDailyNote(userId: string, dateKey: string, content: string) {
+    return this.prisma.dailyNote.upsert({
+      where: { userId_dateKey: { userId, dateKey } },
+      create: { userId, dateKey, content },
+      update: { content },
+    });
+  }
+}
